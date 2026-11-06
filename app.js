@@ -32,9 +32,9 @@ async function buildStitchedPreview(){
  const ffmpegBase='https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm';
  const coreBase='https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm';
  await ff.load({
-  // Convert the worker script to a same-origin blob URL. GitHub Pages blocks
-  // constructing a Worker directly from the cross-origin jsDelivr URL.
-  workerURL:await toBlobURL(ffmpegBase+'/worker.js','text/javascript'),
+  // The FFmpeg API worker must start from this site's origin. This tiny
+  // same-origin module shim imports FFmpeg's worker and its sibling modules.
+  classWorkerURL:new URL('./ffmpeg-worker.js',document.baseURI).href,
   coreURL:await toBlobURL(coreBase+'/ffmpeg-core.js','text/javascript'),
   wasmURL:await toBlobURL(coreBase+'/ffmpeg-core.wasm','application/wasm')
  });
