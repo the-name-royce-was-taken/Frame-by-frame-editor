@@ -17,8 +17,8 @@ function openTextEditor(i,x,y){
  textEditor.style.width=Math.max(130,o.w*cr.width/canvas.width)+'px';textEditor.style.minHeight=Math.max(35,o.h*cr.height/canvas.height)+'px';
  textEditor.style.fontSize=(o.size*cr.width/canvas.width)+'px';textEditor.style.color=o.color;textEditor.style.fontFamily=o.font||'Arial';
  textEditor.style.fontWeight=o.bold?'bold':'normal';textEditor.style.textDecoration=o.underline?'underline':'none';stage.appendChild(textEditor);
- const toolbar=document.createElement('div');toolbar.className='canvas-text-toolbar';toolbar.style.left=(cr.left-sr.left+o.x*cr.width/canvas.width)+'px';toolbar.style.top=Math.max(2,cr.top-sr.top+o.y*cr.height/canvas.height-36)+'px';
- const fontButton=document.createElement('button');fontButton.type='button';fontButton.className='text-font-toggle';fontButton.textContent='T';fontButton.title='Change font';
+ const toolbar=document.createElement('div');toolbar.className='canvas-text-toolbar';toolbar.style.left=(cr.left-sr.left+(o.x+Math.max(130,o.w))*cr.width/canvas.width-31)+'px';toolbar.style.top=(cr.top-sr.top+o.y*cr.height/canvas.height+2)+'px';
+ const fontButton=document.createElement('button');fontButton.type='button';fontButton.className='text-font-toggle';fontButton.textContent='T';fontButton.title='Change font';fontButton.setAttribute('aria-label','Change font');
  const fontSelect=document.createElement('select');fontSelect.className='text-font-select';fontSelect.setAttribute('aria-label','Font family');fontSelect.hidden=true;
  ['Arial','Georgia','Times New Roman','Courier New','Verdana','Trebuchet MS'].forEach(name=>{const option=document.createElement('option');option.value=name;option.textContent=name;fontSelect.append(option)});fontSelect.value=o.font||'Arial';
  fontButton.addEventListener('mousedown',e=>e.preventDefault());fontButton.addEventListener('click',()=>{fontSelect.hidden=!fontSelect.hidden;if(!fontSelect.hidden)fontSelect.focus()});
