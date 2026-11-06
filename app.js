@@ -14,12 +14,18 @@ async function render(){ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canva
 function timeline(){const wrap=$('timeline');wrap.innerHTML='';const observer=new IntersectionObserver(entries=>{for(const entry of entries){if(entry.isIntersecting){const item=entry.target;observer.unobserve(item);drawThumb(frames[+item.dataset.frame],item.querySelector('canvas'))}}},{root:wrap,rootMargin:'100px'});frames.forEach((f,i)=>{const item=document.createElement('div');item.className='thumb'+(i===index?' active':'');item.dataset.frame=i;item.title='Frame '+(i+1);const thumb=document.createElement('canvas');thumb.width=152;thumb.height=76;const t=thumb.getContext('2d');t.fillStyle='#fff';t.fillRect(0,0,152,76);item.append(thumb);const label=document.createElement('small');label.textContent=i+1;item.append(label);item.onclick=()=>loadFrame(i);wrap.append(item);observer.observe(item)});updateAudioTrack()}
 async function drawThumb(f,thumb){const t=thumb.getContext('2d');try{const b=await bitmapFromKey(f.baseKey);if(b){t.drawImage(b,0,0,thumb.width,thumb.height);b.close?.()}const d=await bitmapFromKey(f.drawKey);if(d){t.drawImage(d,0,0,thumb.width,thumb.height);d.close?.()}}catch(e){console.warn('Thumbnail load failed',e)}}
 function updateAudioTrack(){
- const row=$('audio-track-row'),lane=$('audio-track-lane');if(!row||!lane)return;
- const visible=!!audioTrackSource;row.hidden=!visible;if(!visible)return;
- const framePx=83,clipFrames=Math.max(1,Math.ceil((audioDuration||frames.length*frameDuration)/Math.max(.001,frameDuration)));
- const laneFrames=frames.length+clipFrames-1;
+ const row=$('audio-track-row'),lane=$('audio-track-lane'),clip=$('audio-track-clip'),empty=$('audio-track-empty');
+ if(!row||!lane||!clip)return;
+ row.hidden=false;
+ const framePx=83;
+ const hasAudio=!!audioTrackSource;
+ const clipFrames=hasAudio?Math.max(1,Math.ceil((audioDuration||frames.length*frameDuration)/Math.max(.001,frameDuration))):0;
+ const laneFrames=Math.max(frames.length,hasAudio?frames.length+clipFrames-1:1);
  lane.style.width=Math.max(76,laneFrames*framePx-7)+'px';
- const clip=$('audio-track-clip');clip.style.width=Math.max(24,Math.min(laneFrames*framePx-7,clipFrames*framePx-7))+'px';
+ clip.hidden=!hasAudio;
+ if(empty){empty.hidden=hasAudio;empty.textContent=frames.length?'No audio yet — use “Add soundtrack”':'Import audio or video to add a soundtrack';}
+ if(!hasAudio)return;
+ clip.style.width=Math.max(24,Math.min(laneFrames*framePx-7,clipFrames*framePx-7))+'px';
  const maxOffset=Math.max(0,laneFrames-clipFrames);
  audioOffsetFrame=Math.max(0,Math.min(maxOffset,audioOffsetFrame));
  clip.style.left=(audioOffsetFrame*framePx)+'px';
