@@ -176,3 +176,9 @@ body.dark-mode .audio-track-empty{color:#a0a497}
 body.dark-mode .theme-toggle{background:#2b2f2a;border-color:#596052;color:#e8d28b;box-shadow:0 2px 8px #0005}
 body.dark-mode .theme-toggle:hover{background:#383e35}
 @media(max-width:760px){.theme-toggle{left:12px;bottom:12px;width:36px;height:36px}}
+
+
+/* Keep the theme switch inside the tools panel */
+.tool-panel{position:relative;padding-bottom:68px}
+.tool-panel .theme-toggle{position:absolute;left:14px;bottom:14px}
+@media(max-width:760px){.tool-panel .theme-toggle{left:12px;bottom:12px}}
