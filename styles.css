@@ -182,3 +182,7 @@ body.dark-mode .theme-toggle:hover{background:#383e35}
 .tool-panel{position:relative;padding-bottom:68px}
 .tool-panel .theme-toggle{position:absolute;left:14px;bottom:14px}
 @media(max-width:760px){.tool-panel .theme-toggle{left:12px;bottom:12px}}
+
+
+/* Keep Text aligned with the other two-column tool buttons. */
+.tool[data-tool="text"]{grid-column:auto}
