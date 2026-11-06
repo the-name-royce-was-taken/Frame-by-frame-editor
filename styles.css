@@ -50,3 +50,85 @@
 .stage .text-font-option:hover,.stage .text-font-option.selected{background:#eee8f7;color:#3a0770}
 .stage .text-font-select::-webkit-scrollbar{width:7px}
 .stage .text-font-select::-webkit-scrollbar-thumb{background:#b7a8ca;border-radius:8px}
+
+
+/* Warm, practical studio finish: quiet surfaces, restrained color, clear hierarchy. */
+:root{
+ color-scheme:light;
+ --bg:#e9e6df;--panel:#f7f5f0;--panel-2:#eeece5;--line:#d8d4ca;
+ --muted:#77756e;--text:#282923;--accent:#ad5b3d;--accent-2:#c47a5d;--radius:8px;
+}
+body{background:var(--bg);color:var(--text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.topbar{background:#f7f5f0;border-bottom:1px solid #d8d4ca;backdrop-filter:none}
+.brand{color:#282923;font-family:inherit;font-weight:700;letter-spacing:-.5px}
+.brand small{font-family:inherit;letter-spacing:1.2px;color:#77756e}
+.brand-mark{background:#ad5b3d;border-radius:7px;box-shadow:none;color:#fff}
+.project-status{color:#77756e}
+.project-status i,.status-dot{background:#78866a}
+.button{border-radius:6px;font-family:inherit;transition:background .14s ease,border-color .14s ease}
+.button:hover{transform:none;filter:none}
+.button-primary{background:#ad5b3d;box-shadow:none;color:#fff}
+.button-primary:hover{background:#964a30}
+.button-secondary{background:#eeece5;border-color:#d5d1c7;color:#34352f}
+.button-secondary:hover{background:#e5e1d8;border-color:#c8c2b6}
+.app-shell{gap:14px;padding:16px}
+.panel,.editor{background:var(--panel);border:1px solid #d8d4ca;border-radius:8px;box-shadow:0 2px 8px #30291b0a}
+.panel{padding:16px}
+.panel-heading{margin-bottom:17px}
+.eyebrow{font-size:10px;letter-spacing:1px;color:#858177;font-weight:650}
+.panel h2{font-family:inherit;font-size:19px;letter-spacing:-.35px;color:#292a24}
+.tool-grid{gap:6px}
+.tool{padding:10px 9px;border:1px solid #dedbd2;background:#f1efe9;border-radius:6px;color:#55564f;font-family:inherit}
+.tool span{color:#77776f}
+.tool:hover{background:#eae7df;border-color:#cbc6bb}
+.tool.active{border-color:#b86a4d;background:#f4e8e1;color:#713e2e;box-shadow:inset 3px 0 #ad5b3d}
+.tool.active span{color:#ad5b3d}
+.control-group{margin-top:18px}
+.control-group label{color:#55564f}
+.label-row output{color:#ad5b3d}
+input[type=range]{accent-color:#ad5b3d}
+input[type=color]{border:1px solid #d0ccc2;background:#f1efe9;border-radius:5px}
+.color-row{color:#77756e}
+select{border:1px solid #d5d1c7;border-radius:6px;background:#f1efe9;color:#34352f;font-family:inherit}
+.hint{color:#77756e;line-height:1.55}
+.divider{background:#dedbd2;margin:19px 0}
+.editor{padding:13px;gap:11px}
+.workspace-toolbar strong{font-family:inherit;color:#57574f;font-weight:650}
+.zoom-label{color:#77756e}
+.stage{border:1px solid #d4d0c6;border-radius:6px;background-color:#e7e4dc;background-image:linear-gradient(45deg,#dedbd3 25%,transparent 25%),linear-gradient(-45deg,#dedbd3 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#dedbd3 75%),linear-gradient(-45deg,transparent 75%,#dedbd3 75%);background-size:20px 20px;background-position:0 0,0 10px,10px -10px,-10px 0}
+.stage canvas{box-shadow:0 3px 12px #30291b20}
+.empty-state{color:#34352f}
+.empty-icon{color:#ad5b3d}
+.empty-state h2{font-family:inherit;font-size:17px}
+.empty-state p{color:#77756e}
+.transport-buttons button{border:1px solid #d5d1c7;background:#f1efe9;color:#42433c;border-radius:6px}
+.transport-buttons button:hover{background:#e6e2d9}
+.transport-buttons .play-button{background:#ad5b3d;border-color:#ad5b3d;color:#fff}
+.frame-readout span{color:#68685f}
+.timeline-wrap{border-top:1px solid #dedbd2}
+.timeline-header span:last-child{color:#77756e}
+.thumb{border:2px solid #d5d1c7;border-radius:5px}
+.thumb.active{border-color:#ad5b3d;box-shadow:0 0 0 2px #ad5b3d20}
+.thumb small{background:#34352f;color:#fff}
+.media-preview{border:1px dashed #c9c4b8;border-radius:7px;background:#f1efe9}
+#media-placeholder{color:#77756e}
+#media-placeholder strong{color:#34352f}
+.media-icon{color:#ad5b3d}
+.export-note{border:1px solid #dedbd2;background:#f1efe9;border-radius:7px}
+.export-note p{color:#77756e}
+.status-line{color:#68685f}
+.memory-card{padding:12px;background:#f0f0e9;border:1px solid #d9dbce;border-radius:7px}
+.memory-card p{color:#6d7565}
+.preview-dialog{border:1px solid #d8d4ca;border-radius:9px;background:#f7f5f0;color:#282923;box-shadow:0 16px 50px #30291b30}
+.preview-dialog::backdrop{background:#29282088;backdrop-filter:blur(2px)}
+.preview-dialog-header h2{font-family:inherit}
+.preview-dialog video{background:#282923;border-radius:6px}
+.audio-track-title{color:#68685f}
+.audio-track-lane{border:1px solid #d4d0c6;border-radius:5px;background:repeating-linear-gradient(90deg,#e8e5dd 0,#e8e5dd 75px,#d8d4ca 76px,#d8d4ca 82px)}
+.audio-track-clip{border:1px solid #6c866e;border-radius:4px;background:#788c70;color:#fff}
+.audio-track-empty{color:#77756e}
+.canvas-text-editor{border:1px solid #ad5b3d;outline:1px solid #ad5b3d33;box-shadow:0 2px 8px #30291b20}
+.stage .text-font-toggle{border:1px solid #3a0770;border-radius:4px;background:#fff;color:#3a0770}
+.stage .text-font-select{border:1px solid #c9c2d0;border-radius:6px;box-shadow:0 4px 12px #30291b20}
+.stage .text-font-option:hover,.stage .text-font-option.selected{background:#f1e9f4;color:#3a0770}
+@media(max-width:760px){.topbar{background:#f7f5f0}.app-shell{padding:9px}.editor{min-height:65vh}}
