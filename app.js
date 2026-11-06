@@ -272,4 +272,11 @@ window.addEventListener('keydown',e=>{
  if(e.key==='Delete'||e.key==='Backspace'){if(tool==='cursor'&&textSelectionIndex>=0){e.preventDefault();deleteSelectedText()}return}
  if(e.key==='ArrowLeft')loadFrame(index-1);if(e.key==='ArrowRight')loadFrame(index+1)
 });
+const themeToggle=$('theme-toggle');
+if(themeToggle)themeToggle.addEventListener('click',()=>{
+ const dark=document.body.classList.toggle('dark-mode');
+ themeToggle.innerHTML='<span aria-hidden="true">'+(dark?'☾':'☼')+'</span>';
+ themeToggle.setAttribute('aria-label',dark?'Switch to light mode':'Switch to dark mode');
+ themeToggle.title=dark?'Switch to light mode':'Switch to dark mode';
+});
 frames=[blankFrame(0)];loadFrame(0);
