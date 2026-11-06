@@ -243,6 +243,7 @@ $('text-paste').onclick=pasteSelectedText;
 window.addEventListener('keydown',e=>{
  if(textEditor)return;
  const mod=e.ctrlKey||e.metaKey;
+ if(mod&&(e.key.toLowerCase()==='b'||e.key.toLowerCase()==='u')&&tool==='cursor'&&textSelectionIndex>=0&&textItems[textSelectionIndex]){e.preventDefault();const o=textItems[textSelectionIndex];if(e.key.toLowerCase()==='b')o.bold=!o.bold;else o.underline=!o.underline;saveTextItems().then(()=>{render();timeline()});return}
  if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();$('undo').click();return}
  if(mod&&e.key.toLowerCase()==='c'){e.preventDefault();if(tool==='cursor'&&textSelectionIndex>=0)copySelectedText(false);else $('copy').click();return}
  if(mod&&e.key.toLowerCase()==='x'){if(tool==='cursor'&&textSelectionIndex>=0){e.preventDefault();copySelectedText(true)}return}
