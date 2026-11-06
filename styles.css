@@ -190,7 +190,7 @@ body.dark-mode .theme-toggle:hover{background:#383e35}
 
 /* Compact delete control on each timeline frame thumbnail. */
 .thumb{position:relative}
-.thumb-delete{position:absolute;top:4px;left:4px;z-index:3;width:21px;height:21px;padding:3px;display:grid;place-items:center;border:1px solid #d8d4ca;border-radius:4px;background:#f7f5f0;color:#6b5147;opacity:.9;cursor:pointer}
+.thumb-delete{position:absolute;top:4px;right:4px;z-index:3;width:21px;height:21px;padding:3px;display:grid;place-items:center;border:1px solid #d8d4ca;border-radius:4px;background:#f7f5f0;color:#6b5147;opacity:.9;cursor:pointer}
 .thumb-delete svg{display:block;width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
 .thumb-delete:hover:not(:disabled){background:#f1e1dc;border-color:#ad5b3d;color:#923f2d}
 .thumb-delete:disabled{opacity:.3;cursor:not-allowed}
