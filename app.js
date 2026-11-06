@@ -1,16 +1,16 @@
 const $=id=>document.getElementById(id),canvas=$('c'),ctx=canvas.getContext('2d',{alpha:false}),video=$('preview-video');
 let sourceVideo=null,stitchedPreviewUrl=null,shapePreviewEnd=null;
-let activeDrawDirty=false,frames=[],index=0,tool='pen',drawing=false,start,last,selection=null,textItems=[],textDrag=null,clipboard=null,clipboardPosition=null,paste=null,audioFile=null,videoFile=null,audioTrackSource=null,audioDuration=0,audioOffsetFrame=0,audioDrag=null,undoStack=[],playTimer=null,activeDraw=document.createElement('canvas'),activeBase=null,frameSeq=0,loadToken=0,previewCallback=0,previewPlaying=false,frameDuration=1/30;
+let activeDrawDirty=false,frames=[],index=0,tool='pen',drawing=false,start,last,selection=null,textItems=[],textSelectionIndex=-1,textDrag=null,clipboard=null,clipboardPosition=null,paste=null,audioFile=null,videoFile=null,audioTrackSource=null,audioDuration=0,audioOffsetFrame=0,audioDrag=null,undoStack=[],playTimer=null,activeDraw=document.createElement('canvas'),activeBase=null,frameSeq=0,loadToken=0,previewCallback=0,previewPlaying=false,frameDuration=1/30;
 activeDraw.width=canvas.width;activeDraw.height=canvas.height;
 const key=(kind)=>kind+'-'+Date.now().toString(36)+'-'+(++frameSeq).toString(36);
 function blankFrame(time=0){return {baseKey:null,drawKey:null,textKey:null,time};}
 async function saveTextItems(){if(!frames.length)return;const f=frames[index],blob=new Blob([JSON.stringify(textItems)],{type:'application/json'});const k=key('text');await FrameStore.put(k,blob);if(f.textKey)await FrameStore.del(f.textKey);f.textKey=k}
-function drawTextItems(target,items=textItems,handles=false){items.forEach((o,i)=>{target.save();target.font=`${o.size}px ${o.font||'Arial'}`;target.fillStyle=o.color;target.textBaseline='top';const lines=String(o.text).split(/\r?\n/);lines.forEach((line,j)=>target.fillText(line,o.x,o.y+j*o.size*1.2));if(handles&&i===textItems.length-1){target.strokeStyle='#8878ff';target.lineWidth=2;target.setLineDash([5,3]);target.strokeRect(o.x-3,o.y-3,o.w+6,o.h+6);target.setLineDash([]);target.fillStyle='#8878ff';target.fillRect(o.x+o.w-6,o.y+o.h-6,12,12)}target.restore()})}
+function drawTextItems(target,items=textItems,handles=false){items.forEach((o,i)=>{target.save();target.font=`${o.size}px ${o.font||'Arial'}`;target.fillStyle=o.color;target.textBaseline='top';const lines=String(o.text).split(/\r?\n/);lines.forEach((line,j)=>target.fillText(line,o.x,o.y+j*o.size*1.2));if(handles&&i===textSelectionIndex){target.strokeStyle='#8878ff';target.lineWidth=2;target.setLineDash([5,3]);target.strokeRect(o.x-3,o.y-3,o.w+6,o.h+6);target.setLineDash([]);target.fillStyle='#8878ff';target.fillRect(o.x+o.w-6,o.y+o.h-6,12,12)}target.restore()})}
 let textEditor=null,textEditorIndex=-1;
 function openTextEditor(i,x,y){
  if(textEditor)finishTextEditor();
  const existing=i>=0?textItems[i]:null;
- if(!existing){const size=Math.max(16,+$('size').value*2),p={x,y,w:160,h:size*1.4,size,color:$('color').value,font:'Arial',text:''};textItems.push(p);i=textItems.length-1}
+ if(!existing){const size=Math.max(16,+$('size').value*2),p={x,y,w:160,h:size*1.4,size,color:$('color').value,font:'Arial',text:''};textItems.push(p);i=textItems.length-1}textSelectionIndex=i;
  textEditorIndex=i;const o=textItems[i],stage=$('stage'),cr=canvas.getBoundingClientRect(),sr=stage.getBoundingClientRect();
  textEditor=document.createElement('textarea');textEditor.className='canvas-text-editor';textEditor.value=existing?o.text:'';textEditor.placeholder='Type here…';textEditor.spellcheck=false;textEditor.style.pointerEvents='auto';
  textEditor.style.left=(cr.left-sr.left+o.x*cr.width/canvas.width)+'px';textEditor.style.top=(cr.top-sr.top+o.y*cr.height/canvas.height)+'px';
@@ -27,7 +27,7 @@ async function storeBlob(kind,blob,frame){if(!blob)return;const k=key(kind);awai
 async function saveActive(){if(!frames.length||!activeDrawDirty)return;const blob=await new Promise(r=>activeDraw.toBlob(r,'image/webp',.72));await storeBlob('draw',blob,frames[index]);activeDrawDirty=false}
 async function bitmapFromKey(k){const blob=await FrameStore.get(k);return blob?await createImageBitmap(blob):null}
 async function loadFrame(i){if(!frames.length)return;await saveActive();index=Math.max(0,Math.min(frames.length-1,i));const token=++loadToken,frame=frames[index];activeDraw.width=canvas.width;activeDraw.height=canvas.height;activeBase=null;activeDrawDirty=false;textItems=[];try{if(frame.textKey){const tb=await FrameStore.get(frame.textKey);if(tb)textItems=JSON.parse(await tb.text())}activeBase=await bitmapFromKey(frame.baseKey);if(token!==loadToken){activeBase?.close?.();return}const draw=await bitmapFromKey(frame.drawKey);if(draw){dctx().drawImage(draw,0,0);draw.close?.()}}catch(err){$('status').textContent='Could not load frame from local storage: '+err.message}selection=null;paste=null;await render();timeline()}
-async function render(){ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);if(activeBase)ctx.drawImage(activeBase,0,0,canvas.width,canvas.height);ctx.drawImage(activeDraw,0,0);drawTextItems(ctx,textItems,tool==='text');if(shapePreviewEnd&&['line','rect','ellipse'].includes(tool))drawShape(ctx,start,shapePreviewEnd);if(selection){ctx.save();ctx.setLineDash([7,4]);ctx.strokeStyle='#7665ef';ctx.lineWidth=2;ctx.strokeRect(selection.x,selection.y,selection.w,selection.h);ctx.restore()}if(paste)ctx.drawImage(paste.img,paste.x,paste.y);$('count').textContent='Frame '+(index+1)+' / '+frames.length;$('scrub').max=Math.max(0,frames.length-1);$('scrub').value=index;$('timeline-count').textContent=frames.length+' frame'+(frames.length===1?'':'s');$('canvas-label').textContent=canvas.width+' × '+canvas.height;$('empty-state').hidden=frames.length>0;$('media-placeholder').hidden=!!videoFile||!!audioFile}
+async function render(){ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);if(activeBase)ctx.drawImage(activeBase,0,0,canvas.width,canvas.height);ctx.drawImage(activeDraw,0,0);drawTextItems(ctx,textItems,tool==='text'||tool==='cursor');if(shapePreviewEnd&&['line','rect','ellipse'].includes(tool))drawShape(ctx,start,shapePreviewEnd);if(selection){ctx.save();ctx.setLineDash([7,4]);ctx.strokeStyle='#7665ef';ctx.lineWidth=2;ctx.strokeRect(selection.x,selection.y,selection.w,selection.h);ctx.restore()}if(paste)ctx.drawImage(paste.img,paste.x,paste.y);$('count').textContent='Frame '+(index+1)+' / '+frames.length;$('scrub').max=Math.max(0,frames.length-1);$('scrub').value=index;$('timeline-count').textContent=frames.length+' frame'+(frames.length===1?'':'s');$('canvas-label').textContent=canvas.width+' × '+canvas.height;$('empty-state').hidden=frames.length>0;$('media-placeholder').hidden=!!videoFile||!!audioFile}
 function timeline(){const wrap=$('timeline');wrap.innerHTML='';const observer=new IntersectionObserver(entries=>{for(const entry of entries){if(entry.isIntersecting){const item=entry.target;observer.unobserve(item);drawThumb(frames[+item.dataset.frame],item.querySelector('canvas'))}}},{root:wrap,rootMargin:'100px'});frames.forEach((f,i)=>{const item=document.createElement('div');item.className='thumb'+(i===index?' active':'');item.dataset.frame=i;item.title='Frame '+(i+1);const thumb=document.createElement('canvas');thumb.width=152;thumb.height=76;const t=thumb.getContext('2d');t.fillStyle='#fff';t.fillRect(0,0,152,76);item.append(thumb);const label=document.createElement('small');label.textContent=i+1;item.append(label);item.onclick=()=>loadFrame(i);wrap.append(item);observer.observe(item)});updateAudioTrack()}
 async function drawThumb(f,thumb){const t=thumb.getContext('2d');try{const b=await bitmapFromKey(f.baseKey);if(b){t.drawImage(b,0,0,thumb.width,thumb.height);b.close?.()}const d=await bitmapFromKey(f.drawKey);if(d){t.drawImage(d,0,0,thumb.width,thumb.height);d.close?.()}}catch(e){console.warn('Thumbnail load failed',e)}}
 function updateAudioTrack(){
@@ -63,13 +63,20 @@ function drawShape(target,startPoint,endPoint){
  d.stroke();d.restore();
 }
 function paint(p){const d=dctx();d.lineWidth=+$('size').value;d.strokeStyle=$('color').value;d.lineCap='round';d.lineJoin='round';d.globalCompositeOperation=tool==='eraser'?'destination-out':'source-over';if(tool==='eraser')d.lineWidth*=3;d.beginPath();if(tool==='pen'||tool==='eraser'){d.moveTo(last.x,last.y);d.lineTo(p.x,p.y)}d.stroke();d.globalCompositeOperation='source-over'}
-function updateToolCursor(){const cursor=tool==='eraser'?'cell':(tool==='text'||tool==='select')?'crosshair':'crosshair';canvas.style.cursor=cursor;$('stage').style.cursor=cursor;$('empty-state').style.pointerEvents='none';$('stage').classList.toggle('text-tool-active',tool==='text');}
+function updateToolCursor(){const cursor=tool==='cursor'?'default':tool==='eraser'?'cell':'crosshair';canvas.style.cursor=cursor;$('stage').style.cursor=cursor;$('empty-state').style.pointerEvents='none';$('stage').classList.toggle('text-tool-active',tool==='text');}
 document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x===b));updateToolCursor();}));
 updateToolCursor();
 $('size').oninput=e=>$('size-value').textContent=e.target.value+' px';
 canvas.onpointerdown=e=>{
  if(!frames.length)return;
  drawing=true;start=last=point(e);
+ if(tool==='cursor'){
+  const hit=textItems.findIndex(o=>start.x>=o.x-5&&start.x<=o.x+o.w+5&&start.y>=o.y-5&&start.y<=o.y+o.h+5);
+  textSelectionIndex=hit;
+  if(hit>=0){const o=textItems[hit],resizeHit=start.x>=o.x+o.w-14&&start.y>=o.y+o.h-14;textDrag={index:hit,mode:resizeHit?'resize':'move',x:start.x,y:start.y,ox:o.x,oy:o.y,ow:o.w,oh:o.h,os:o.size};canvas.setPointerCapture(e.pointerId)}
+  else textDrag=null;
+  drawing=hit>=0;render();return;
+ }
  if(tool==='text'){
   const hit=textItems.findIndex(o=>start.x>=o.x-5&&start.x<=o.x+o.w+5&&start.y>=o.y-5&&start.y<=o.y+o.h+5);
   if(hit<0){drawing=false;return}
@@ -83,6 +90,7 @@ canvas.onpointerdown=e=>{
  else if(paste){paste.dragOffset={x:start.x-paste.x,y:start.y-paste.y}}
  else{snapshot();if(['line','rect','ellipse'].includes(tool))shapePreviewEnd={...start}}
 };
+canvas.addEventListener('dblclick',e=>{if(tool!=='cursor'||textEditor)return;const p=point(e),hit=textItems.findIndex(o=>p.x>=o.x-5&&p.x<=o.x+o.w+5&&p.y>=o.y-5&&p.y<=o.y+o.h+5);if(hit>=0)openTextEditor(hit,p.x,p.y)});
 canvas.addEventListener('click',e=>{
  if(tool!=='text'||!frames.length||e.target!==canvas||textEditor)return;
  const p=point(e);
@@ -92,7 +100,7 @@ canvas.addEventListener('click',e=>{
 canvas.onpointermove=e=>{
  if(!drawing)return;
  const p=point(e);
- if(tool==='text'&&textDrag){const o=textItems[textDrag.index],dx=p.x-textDrag.x,dy=p.y-textDrag.y;if(textDrag.mode==='resize'){o.w=Math.max(20,textDrag.ow+dx);o.h=Math.max(o.size,textDrag.oh+dy);o.size=Math.max(8,Math.min(300,textDrag.os+dx*.35))}else{o.x=textDrag.ox+dx;o.y=textDrag.oy+dy}render();return}
+ if((tool==='text'||tool==='cursor')&&textDrag){const o=textItems[textDrag.index],dx=p.x-textDrag.x,dy=p.y-textDrag.y;if(textDrag.mode==='resize'){o.w=Math.max(20,textDrag.ow+dx);o.h=Math.max(o.size,textDrag.oh+dy);o.size=Math.max(8,Math.min(300,textDrag.os+dx*.35))}else{o.x=textDrag.ox+dx;o.y=textDrag.oy+dy}render();return}
  if(tool==='select'){selection=rect(start,p);render();return}
  if(paste){paste.x=p.x-(paste.dragOffset?.x||0);paste.y=p.y-(paste.dragOffset?.y||0);render();return}
  if(['line','rect','ellipse'].includes(tool)){shapePreviewEnd=p}
@@ -102,7 +110,7 @@ canvas.onpointermove=e=>{
 canvas.onpointerup=async e=>{
  if(!drawing)return;
  const p=point(e);drawing=false;
- if(tool==='text'&&textDrag){const t=textDrag,dx=p.x-t.x,dy=p.y-t.y;textDrag=null;if(Math.abs(dx)+Math.abs(dy)<4){openTextEditor(t.index,p.x,p.y);return}await saveTextItems();render();timeline();return}
+ if((tool==='text'||tool==='cursor')&&textDrag){const t=textDrag,dx=p.x-t.x,dy=p.y-t.y;textDrag=null;if(Math.abs(dx)+Math.abs(dy)<4){if(tool==='text')openTextEditor(t.index,p.x,p.y);else render();return}await saveTextItems();render();timeline();return}
  if(['line','rect','ellipse'].includes(tool)){
   // Commit exactly one final shape to the drawing layer. The live preview
   // was drawn only on the display canvas, never into activeDraw.
