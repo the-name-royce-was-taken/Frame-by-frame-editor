@@ -186,3 +186,13 @@ body.dark-mode .theme-toggle:hover{background:#383e35}
 
 /* Keep Text aligned with the other two-column tool buttons. */
 .tool[data-tool="text"]{grid-column:auto}
+
+
+/* Compact delete control on each timeline frame thumbnail. */
+.thumb{position:relative}
+.thumb-delete{position:absolute;top:4px;left:4px;z-index:3;width:21px;height:21px;padding:3px;display:grid;place-items:center;border:1px solid #d8d4ca;border-radius:4px;background:#f7f5f0;color:#6b5147;opacity:.9;cursor:pointer}
+.thumb-delete svg{display:block;width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.thumb-delete:hover:not(:disabled){background:#f1e1dc;border-color:#ad5b3d;color:#923f2d}
+.thumb-delete:disabled{opacity:.3;cursor:not-allowed}
+body.dark-mode .thumb-delete{background:#292f29;border-color:#596052;color:#e0b5a1}
+body.dark-mode .thumb-delete:hover:not(:disabled){background:#49332e;border-color:#d09270;color:#ffd4bf}
