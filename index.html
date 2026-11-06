@@ -44,13 +44,13 @@
       <div class="transport">
         <div class="transport-buttons"><button id="prev" title="Previous frame">◀</button><button id="play" class="play-button">▶ Play</button><button id="next" title="Next frame">▶</button></div>
         <div class="frame-readout"><span id="count">Frame 1 / 1</span><input id="scrub" type="range" min="0" max="0" value="0"></div>
-        <button class="button button-secondary" id="add">＋ Add frame</button>
+        <button class="button button-secondary" id="add">＋ Add frame</button><button class="button button-primary" id="preview-open">Preview edited video</button>
       </div>
       <div class="timeline-wrap"><div class="timeline-header"><span class="eyebrow">TIMELINE</span><span id="timeline-count">1 frame</span></div><div class="timeline" id="timeline"></div></div>
     </section>
     <aside class="panel media-panel">
       <div class="panel-heading"><div><span class="eyebrow">PROJECT</span><h2>Media & export</h2></div></div>
-      <div class="media-preview"><video id="vid" controls playsinline hidden></video><audio id="aud" controls hidden></audio><div id="media-placeholder"><div class="media-icon">▧</div><strong>No media loaded</strong><span>MP4, MOV or MP3</span></div></div>
+      <div class="media-preview"><audio id="aud" controls hidden></audio><div id="media-placeholder"><div class="media-icon">▧</div><strong>No media loaded</strong><span>MP4, MOV or MP3</span></div></div>
       <p class="hint" id="info">Import a video to extract frames. MP3 can be used as an audio soundtrack.</p>
       <div class="divider"></div>
       <div class="control-group"><label for="format">Export format</label><select id="format"><option value="mp4">MP4 · H.264 / AVC</option><option value="mov">MOV · H.264</option><option value="hevc">MP4 · H.265 / HEVC</option><option value="movhevc">MOV · HEVC</option><option value="mpeg4">MOV · MPEG-4</option><option value="webm">WebM · Browser native</option></select></div>
@@ -59,7 +59,7 @@
       <div class="memory-card"><span class="eyebrow">PERFORMANCE</span><strong>Memory-aware mode</strong><p>Frames are compressed and stored in the browser’s FrameForgeProject/frames folder, then decoded only when needed.</p></div>
     </aside>
   </main>
-  <script src="frame-store.js"></script>
+  <dialog id="preview-dialog" class="preview-dialog"><div class="preview-dialog-header"><div><span class="eyebrow">PLAYBACK</span><h2>Edited video preview</h2></div><button class="button button-secondary" id="preview-close">Close preview</button></div><video id="preview-video" controls playsinline></video></dialog>\n  <script src="frame-store.js"></script>
   <script type="module" src="app.js"></script>
 </body>
 </html>
