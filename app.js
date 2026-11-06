@@ -72,7 +72,7 @@ canvas.onpointerdown=e=>{
  drawing=true;start=last=point(e);
  if(tool==='text'){
   const hit=textItems.findIndex(o=>start.x>=o.x-5&&start.x<=o.x+o.w+5&&start.y>=o.y-5&&start.y<=o.y+o.h+5);
-  if(hit<0){openTextEditor(-1,start.x,start.y);drawing=false;return}
+  if(hit<0){drawing=false;return}
   canvas.setPointerCapture(e.pointerId);
   const o=textItems[hit],resizeHit=start.x>=o.x+o.w-14&&start.y>=o.y+o.h-14;
   textDrag={index:hit,mode:resizeHit?'resize':'move',x:start.x,y:start.y,ox:o.x,oy:o.y,ow:o.w,oh:o.h,os:o.size};
@@ -83,6 +83,12 @@ canvas.onpointerdown=e=>{
  else if(paste){paste.dragOffset={x:start.x-paste.x,y:start.y-paste.y}}
  else{snapshot();if(['line','rect','ellipse'].includes(tool))shapePreviewEnd={...start}}
 };
+canvas.addEventListener('click',e=>{
+ if(tool!=='text'||!frames.length||e.target!==canvas||textEditor)return;
+ const p=point(e);
+ const hit=textItems.findIndex(o=>p.x>=o.x-5&&p.x<=o.x+o.w+5&&p.y>=o.y-5&&p.y<=o.y+o.h+5);
+ if(hit<0)openTextEditor(-1,p.x,p.y);
+});
 canvas.onpointermove=e=>{
  if(!drawing)return;
  const p=point(e);
