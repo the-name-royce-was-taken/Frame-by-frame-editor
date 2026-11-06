@@ -22,22 +22,27 @@ $('size').oninput=e=>$('size-value').textContent=e.target.value+' px';
 canvas.onpointerdown=e=>{if(!frames.length)return;canvas.setPointerCapture(e.pointerId);drawing=true;start=last=point(e);if(tool==='select'){selection={...start,w:0,h:0};render()}else if(paste){paste.x=start.x;paste.y=start.y}else snapshot()};
 canvas.onpointermove=e=>{if(!drawing)return;const p=point(e);if(tool==='select'){selection=rect(start,p);render();return}if(paste){paste.x=p.x;paste.y=p.y;render();return}if(tool==='pen'||tool==='eraser')paint(p);else{render();paint(p)}last=p;render()};
 canvas.onpointerup=async()=>{drawing=false;if(paste){dctx().drawImage(paste.img,paste.x,paste.y);paste=null}if(selection)selection=rect(start,{x:start.x+selection.w,y:start.y+selection.h});await saveActive();render();timeline()};
-async function buildStitchedPreview(){
- if(!frames.length)throw Error('There are no frames to play.');
- $('status').textContent='Preparing edited frames for playback…';
+async function createFFmpegInstance(){
  const {FFmpeg}=await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js');
  const {toBlobURL}=await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js');
  const ff=new FFmpeg();
- ff.on('log',({message})=>{if(message)$('status').textContent='Building playback: '+message.slice(-90)});
- const ffmpegBase='https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm';
+ const packageBase='https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm';
  const coreBase='https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm';
+ // classWorkerURL is the FFmpeg API worker (not workerURL, which is only
+ // for the multithreaded core). It must be hosted on this GitHub Pages origin.
+ const classWorkerURL=new URL('ffmpeg-worker.js',window.location.href).href;
  await ff.load({
-  // The FFmpeg API worker must start from this site's origin. This tiny
-  // same-origin module shim imports FFmpeg's worker and its sibling modules.
-  classWorkerURL:new URL('./ffmpeg-worker.js',document.baseURI).href,
+  classWorkerURL,
   coreURL:await toBlobURL(coreBase+'/ffmpeg-core.js','text/javascript'),
   wasmURL:await toBlobURL(coreBase+'/ffmpeg-core.wasm','application/wasm')
  });
+ return ff;
+}
+async function buildStitchedPreview(){
+ if(!frames.length)throw Error('There are no frames to play.');
+ $('status').textContent='Preparing edited frames for playback…';
+ const ff=await createFFmpegInstance();
+ ff.on('log',({message})=>{if(message)$('status').textContent='Building playback: '+message.slice(-90)});
  const fps=Math.max(1,Math.min(60,Math.round(1/Math.max(.001,frameDuration))));
  for(let i=0;i<frames.length;i++){
   const blob=await exportFrame(frames[i]);
@@ -90,7 +95,7 @@ function stopPreview(){previewPlaying=false;video.pause();$('play').textContent=
 async function exportFrame(frame){const out=document.createElement('canvas');out.width=canvas.width;out.height=canvas.height;const x=out.getContext('2d',{alpha:false});x.fillStyle='#fff';x.fillRect(0,0,out.width,out.height);const base=await bitmapFromKey(frame.baseKey);if(base){x.drawImage(base,0,0,out.width,out.height);base.close?.()}const draw=await bitmapFromKey(frame.drawKey);if(draw){x.drawImage(draw,0,0);draw.close?.()}return new Promise(resolve=>out.toBlob(resolve,'image/png'))}
 function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000)}
 $('export').onclick=async()=>{if(!frames.length)return alert('Add or import frames before exporting.');const fmt=$('format').value;try{if(fmt==='webm'){const stream=canvas.captureStream(Math.max(1,Math.round(1/frameDuration))),rec=new MediaRecorder(stream),chunks=[];rec.ondataavailable=e=>chunks.push(e.data);rec.start();for(let i=0;i<frames.length;i++){await loadFrame(i);await new Promise(r=>setTimeout(r,frameDuration*1000))}rec.stop();await new Promise(r=>rec.onstop=r);download(new Blob(chunks,{type:'video/webm'}),'frameforge.webm');return}
-$('status').textContent='Loading FFmpeg…';const {FFmpeg}=await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js'),{toBlobURL}=await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js'),ff=new FFmpeg();await ff.load({coreURL:await toBlobURL('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.js','text/javascript'),wasmURL:await toBlobURL('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.wasm','application/wasm')});for(let i=0;i<frames.length;i++){const blob=await exportFrame(frames[i]);await ff.writeFile('frame'+String(i).padStart(5,'0')+'.png',new Uint8Array(await blob.arrayBuffer()));if(i%8===0)$('status').textContent='Export prep '+(i+1)+' / '+frames.length}
-const mov=['mov','movhevc','mpeg4'].includes(fmt),hevc=['hevc','movhevc'].includes(fmt),codec=hevc?'libx265':fmt==='mpeg4'?'mpeg4':'libx264',ext=mov?'mov':'mp4',args=['-framerate',String(Math.max(1,Math.round(1/frameDuration))),'-i','frame%05d.png'];if(audioFile){await ff.writeFile('soundtrack.mp3',new Uint8Array(await audioFile.arrayBuffer()));args.push('-i','soundtrack.mp3','-shortest')}args.push('-c:v',codec,'-pix_fmt','yuv420p');if(codec==='libx264')args.push('-preset','ultrafast');args.push('out.'+ext);$('status').textContent='Encoding export…';await ff.exec(args);const output=await ff.readFile('out.'+ext);download(new Blob([output.buffer],{type:ext==='mov'?'video/quicktime':'video/mp4'}),'frameforge.'+ext);$('status').textContent='Export finished'}catch(err){$('status').textContent='Export failed: '+err.message+' (try WebM)';console.error(err)}};
+$('status').textContent='Loading FFmpeg…';const ff=await createFFmpegInstance();for(let i=0;i<frames.length;i++){const blob=await exportFrame(frames[i]);await ff.writeFile('frame'+String(i).padStart(5,'0')+'.png',new Uint8Array(await blob.arrayBuffer()));if(i%8===0)$('status').textContent='Export prep '+(i+1)+' / '+frames.length}
+const mov=['mov','movhevc','mpeg4'].includes(fmt),hevc=['hevc','movhevc'].includes(fmt),codec=hevc?'libx265':fmt==='mpeg4'?'mpeg4':'libx264',ext=mov?'mov':'mp4',args=['-framerate',String(Math.max(1,Math.round(1/frameDuration))),'-i','frame%05d.png'];if(audioFile){await ff.writeFile('soundtrack.mp3',new Uint8Array(await audioFile.arrayBuffer()));args.push('-i','soundtrack.mp3','-shortest')}args.push('-c:v',codec,'-pix_fmt','yuv420p');if(codec==='libx264')args.push('-preset','ultrafast');args.push('out.'+ext);$('status').textContent='Encoding export…';const exitCode=await ff.exec(args);if(exitCode!==0)throw Error('FFmpeg encoder exited with code '+exitCode);const output=await ff.readFile('out.'+ext);if(!output||!output.length)throw Error('FFmpeg created an empty export');download(new Blob([output],{type:ext==='mov'?'video/quicktime':'video/mp4'}),'frameforge.'+ext);$('status').textContent='Export finished'}catch(err){$('status').textContent='Export failed: '+err.message+' (try WebM)';console.error(err)}};
 window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z')$('undo').click();if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='c')$('copy').click();if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='v')$('paste').click();if(e.key==='ArrowLeft')loadFrame(index-1);if(e.key==='ArrowRight')loadFrame(index+1)});
 frames=[blankFrame(0)];loadFrame(0);
