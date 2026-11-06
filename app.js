@@ -6,7 +6,21 @@ const key=(kind)=>kind+'-'+Date.now().toString(36)+'-'+(++frameSeq).toString(36)
 function blankFrame(time=0){return {baseKey:null,drawKey:null,textKey:null,time};}
 async function saveTextItems(){if(!frames.length)return;const f=frames[index],blob=new Blob([JSON.stringify(textItems)],{type:'application/json'});const k=key('text');await FrameStore.put(k,blob);if(f.textKey)await FrameStore.del(f.textKey);f.textKey=k}
 function drawTextItems(target,items=textItems,handles=false){items.forEach((o,i)=>{target.save();target.font=`${o.size}px ${o.font||'Arial'}`;target.fillStyle=o.color;target.textBaseline='top';const lines=String(o.text).split('\n');lines.forEach((line,j)=>target.fillText(line,o.x,o.y+j*o.size*1.2));if(handles&&i===textItems.length-1){target.strokeStyle='#8878ff';target.lineWidth=2;target.setLineDash([5,3]);target.strokeRect(o.x-3,o.y-3,o.w+6,o.h+6);target.setLineDash([]);target.fillStyle='#8878ff';target.fillRect(o.x+o.w-6,o.y+o.h-6,12,12)}target.restore()})}
-async function editTextItem(i){const o=textItems[i],v=prompt('Edit text:',o.text);if(v===null)return;o.text=v;const lines=v.split('\n');const ctx=canvas.getContext('2d');ctx.font=`${o.size}px ${o.font}`;o.w=Math.max(30,...lines.map(line=>ctx.measureText(line).width));o.h=Math.max(o.size,lines.length*o.size*1.2);await saveTextItems();render();timeline()}
+let textEditor=null,textEditorIndex=-1;
+function openTextEditor(i,x,y){
+ if(textEditor)finishTextEditor();
+ const existing=i>=0?textItems[i]:null;
+ if(!existing){const size=Math.max(16,+$('size').value*2),p={x,y,w:160,h:size*1.4,size,color:$('color').value,font:'Arial',text:''};textItems.push(p);i=textItems.length-1}
+ textEditorIndex=i;const o=textItems[i],stage=$('stage'),cr=canvas.getBoundingClientRect(),sr=stage.getBoundingClientRect();
+ textEditor=document.createElement('textarea');textEditor.className='canvas-text-editor';textEditor.value=existing?o.text:'';textEditor.placeholder='Type here…';textEditor.spellcheck=false;
+ textEditor.style.left=(cr.left-sr.left+o.x*cr.width/canvas.width)+'px';textEditor.style.top=(cr.top-sr.top+o.y*cr.height/canvas.height)+'px';
+ textEditor.style.width=Math.max(130,o.w*cr.width/canvas.width)+'px';textEditor.style.minHeight=Math.max(35,o.h*cr.height/canvas.height)+'px';
+ textEditor.style.fontSize=(o.size*cr.width/canvas.width)+'px';textEditor.style.color=o.color;stage.appendChild(textEditor);
+ textEditor.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();cancelTextEditor()}if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();finishTextEditor()}})
+ textEditor.addEventListener('blur',()=>finishTextEditor());textEditor.focus();
+}
+async function finishTextEditor(){if(!textEditor)return;const editor=textEditor,i=textEditorIndex; textEditor=null;textEditorIndex=-1;const value=editor.value.trimEnd();editor.remove();if(i<0)return;if(!value.trim()){textItems.splice(i,1)}else{const o=textItems[i];o.text=value;const tc=ctx;tc.font=`${o.size}px ${o.font}`;const lines=value.split('\\n');o.w=Math.max(30,...lines.map(line=>tc.measureText(line).width));o.h=Math.max(o.size,lines.length*o.size*1.2)}await saveTextItems();render();timeline()}
+function cancelTextEditor(){if(!textEditor)return;const i=textEditorIndex;textEditor.remove();textEditor=null;textEditorIndex=-1;if(i>=0&&!textItems[i]?.text)textItems.splice(i,1);render()}
 function dctx(){return activeDraw.getContext('2d');}
 function resize(w,h){canvas.width=w;canvas.height=h;activeDraw.width=w;activeDraw.height=h;activeBase=null;}
 async function storeBlob(kind,blob,frame){if(!blob)return;const k=key(kind);await FrameStore.put(k,blob);const old=frame[kind+'Key'];frame[kind+'Key']=k;if(old)await FrameStore.del(old)}
@@ -54,7 +68,7 @@ $('size').oninput=e=>$('size-value').textContent=e.target.value+' px';
 canvas.onpointerdown=e=>{
  if(!frames.length)return;
  canvas.setPointerCapture(e.pointerId);drawing=true;start=last=point(e);
- if(tool==='text'){const hit=textItems.findIndex(o=>start.x>=o.x-5&&start.x<=o.x+o.w+5&&start.y>=o.y-5&&start.y<=o.y+o.h+5);if(hit>=0){if(e.detail>=2){editTextItem(hit);drawing=false;return}const o=textItems[hit];textDrag={index:hit,mode:start.x>o.x+o.w-12&&start.y>o.y+o.h-12?'resize':'move',x:start.x,y:start.y,ox:o.x,oy:o.y,ow:o.w,oh:o.h};}else{const value=prompt('Enter text:');if(value){const size=+$('size').value*2||32,lines=value.split('\\n'),tc=ctx;tc.font=`${size}px Arial`;const w=Math.max(30,...lines.map(line=>tc.measureText(line).width)),h=Math.max(size,lines.length*size*1.2);textItems.push({text:value,x:start.x,y:start.y,w,h,size,color:$('color').value,font:'Arial'});textDrag={index:textItems.length-1,mode:'move',x:start.x,y:start.y,ox:start.x,oy:start.y,ow:w,oh:h};}}render();return}
+ if(tool==='text'){const hit=textItems.findIndex(o=>start.x>=o.x-5&&start.x<=o.x+o.w+5&&start.y>=o.y-5&&start.y<=o.y+o.h+5);openTextEditor(hit,start.x,start.y);drawing=false;return}
  if(tool==='select'){selection={...start,w:0,h:0};render()}
  else if(paste){paste.dragOffset={x:start.x-paste.x,y:start.y-paste.y}}
  else{
