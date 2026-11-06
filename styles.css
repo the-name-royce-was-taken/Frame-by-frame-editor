@@ -42,3 +42,11 @@
 
 /* Ensure the tiny control is anchored to the stage overlay, not laid out beside the canvas. */
 .stage .text-font-toggle{position:absolute!important;flex:none;transform:none;}
+
+/* Scrollable custom font menu with a compact, consistent footprint. */
+.stage .text-font-select{position:absolute;z-index:60;width:170px;max-width: min(45vw, 240px);max-height:180px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:4px;background:#fff;color:#252033;border:1px solid #3a0770;border-radius:6px;box-shadow:0 5px 18px #0006}
+.stage .text-font-select[hidden]{display:none!important}
+.stage .text-font-option{display:block;width:100%;padding:6px 8px;border:0;border-radius:3px;background:transparent;color:#252033;text-align:left;font-size:12px;white-space:nowrap;cursor:pointer}
+.stage .text-font-option:hover,.stage .text-font-option.selected{background:#eee8f7;color:#3a0770}
+.stage .text-font-select::-webkit-scrollbar{width:7px}
+.stage .text-font-select::-webkit-scrollbar-thumb{background:#b7a8ca;border-radius:8px}
