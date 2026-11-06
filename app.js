@@ -1,5 +1,5 @@
 const $=id=>document.getElementById(id),canvas=$('c'),ctx=canvas.getContext('2d',{alpha:false}),video=$('preview-video');
-let sourceVideo=null,stitchedPreviewUrl=null,shapeBaseCanvas=null;
+let sourceVideo=null,stitchedPreviewUrl=null,shapePreviewEnd=null;
 let frames=[],index=0,tool='pen',drawing=false,start,last,selection=null,clipboard=null,paste=null,audioFile=null,videoFile=null,undoStack=[],playTimer=null,activeDraw=document.createElement('canvas'),activeBase=null,frameSeq=0,loadToken=0,previewCallback=0,previewPlaying=false,frameDuration=1/30;
 activeDraw.width=canvas.width;activeDraw.height=canvas.height;
 const key=(kind)=>kind+'-'+Date.now().toString(36)+'-'+(++frameSeq).toString(36);
@@ -10,13 +10,20 @@ async function storeBlob(kind,blob,frame){if(!blob)return;const k=key(kind);awai
 async function saveActive(){if(!frames.length)return;const blob=await new Promise(r=>activeDraw.toBlob(r,'image/webp',.72));await storeBlob('draw',blob,frames[index])}
 async function bitmapFromKey(k){const blob=await FrameStore.get(k);return blob?await createImageBitmap(blob):null}
 async function loadFrame(i){if(!frames.length)return;await saveActive();index=Math.max(0,Math.min(frames.length-1,i));const token=++loadToken,frame=frames[index];activeDraw.width=canvas.width;activeDraw.height=canvas.height;activeBase=null;try{activeBase=await bitmapFromKey(frame.baseKey);if(token!==loadToken){activeBase?.close?.();return}const draw=await bitmapFromKey(frame.drawKey);if(draw){dctx().drawImage(draw,0,0);draw.close?.()}}catch(err){$('status').textContent='Could not load frame from local storage: '+err.message}selection=null;paste=null;await render();timeline()}
-async function render(){ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);if(activeBase)ctx.drawImage(activeBase,0,0,canvas.width,canvas.height);ctx.drawImage(activeDraw,0,0);if(selection){ctx.save();ctx.setLineDash([7,4]);ctx.strokeStyle='#7665ef';ctx.lineWidth=2;ctx.strokeRect(selection.x,selection.y,selection.w,selection.h);ctx.restore()}if(paste)ctx.drawImage(paste.img,paste.x,paste.y);$('count').textContent='Frame '+(index+1)+' / '+frames.length;$('scrub').max=Math.max(0,frames.length-1);$('scrub').value=index;$('timeline-count').textContent=frames.length+' frame'+(frames.length===1?'':'s');$('canvas-label').textContent=canvas.width+' × '+canvas.height;$('empty-state').hidden=frames.length>0;$('media-placeholder').hidden=!!videoFile||!!audioFile}
+async function render(){ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);if(activeBase)ctx.drawImage(activeBase,0,0,canvas.width,canvas.height);ctx.drawImage(activeDraw,0,0);if(shapePreviewEnd&&['line','rect','ellipse'].includes(tool))drawShape(ctx,start,shapePreviewEnd);if(selection){ctx.save();ctx.setLineDash([7,4]);ctx.strokeStyle='#7665ef';ctx.lineWidth=2;ctx.strokeRect(selection.x,selection.y,selection.w,selection.h);ctx.restore()}if(paste)ctx.drawImage(paste.img,paste.x,paste.y);$('count').textContent='Frame '+(index+1)+' / '+frames.length;$('scrub').max=Math.max(0,frames.length-1);$('scrub').value=index;$('timeline-count').textContent=frames.length+' frame'+(frames.length===1?'':'s');$('canvas-label').textContent=canvas.width+' × '+canvas.height;$('empty-state').hidden=frames.length>0;$('media-placeholder').hidden=!!videoFile||!!audioFile}
 function timeline(){const wrap=$('timeline');wrap.innerHTML='';const observer=new IntersectionObserver(entries=>{for(const entry of entries){if(entry.isIntersecting){const item=entry.target;observer.unobserve(item);drawThumb(frames[+item.dataset.frame],item.querySelector('canvas'))}}},{root:wrap,rootMargin:'100px'});frames.forEach((f,i)=>{const item=document.createElement('div');item.className='thumb'+(i===index?' active':'');item.dataset.frame=i;item.title='Frame '+(i+1);const thumb=document.createElement('canvas');thumb.width=152;thumb.height=76;const t=thumb.getContext('2d');t.fillStyle='#fff';t.fillRect(0,0,152,76);item.append(thumb);const label=document.createElement('small');label.textContent=i+1;item.append(label);item.onclick=()=>loadFrame(i);wrap.append(item);observer.observe(item)})}
 async function drawThumb(f,thumb){const t=thumb.getContext('2d');try{const b=await bitmapFromKey(f.baseKey);if(b){t.drawImage(b,0,0,thumb.width,thumb.height);b.close?.()}const d=await bitmapFromKey(f.drawKey);if(d){t.drawImage(d,0,0,thumb.width,thumb.height);d.close?.()}}catch(e){console.warn('Thumbnail load failed',e)}}
 function point(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*canvas.width/r.width,y:(e.clientY-r.top)*canvas.height/r.height}}
 function snapshot(){undoStack.push(activeDraw.toDataURL());if(undoStack.length>8)undoStack.shift()}
 function rect(a,b){return{x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(b.x-a.x),h:Math.abs(b.y-a.y)}}
-function paint(p){const d=dctx();d.lineWidth=+$('size').value;d.strokeStyle=$('color').value;d.lineCap='round';d.lineJoin='round';d.globalCompositeOperation=tool==='eraser'?'destination-out':'source-over';if(tool==='eraser')d.lineWidth*=3;d.beginPath();if(tool==='pen'||tool==='eraser'){d.moveTo(last.x,last.y);d.lineTo(p.x,p.y)}else{d.moveTo(start.x,start.y);if(tool==='line')d.lineTo(p.x,p.y);else if(tool==='rect')d.rect(start.x,start.y,p.x-start.x,p.y-start.y);else if(tool==='ellipse')d.ellipse((start.x+p.x)/2,(start.y+p.y)/2,Math.max(1,Math.abs(p.x-start.x)/2),Math.max(1,Math.abs(p.y-start.y)/2),0,0,Math.PI*2)}d.stroke();d.globalCompositeOperation='source-over'}
+function drawShape(target,startPoint,endPoint){
+ const d=target;d.save();d.lineWidth=+$('size').value;d.strokeStyle=$('color').value;d.lineCap='round';d.lineJoin='round';d.globalCompositeOperation='source-over';d.beginPath();
+ if(tool==='line'){d.moveTo(startPoint.x,startPoint.y);d.lineTo(endPoint.x,endPoint.y)}
+ else if(tool==='rect'){d.rect(startPoint.x,startPoint.y,endPoint.x-startPoint.x,endPoint.y-startPoint.y)}
+ else if(tool==='ellipse'){d.ellipse((startPoint.x+endPoint.x)/2,(startPoint.y+endPoint.y)/2,Math.max(1,Math.abs(endPoint.x-startPoint.x)/2),Math.max(1,Math.abs(endPoint.y-startPoint.y)/2),0,0,Math.PI*2)}
+ d.stroke();d.restore();
+}
+function paint(p){const d=dctx();d.lineWidth=+$('size').value;d.strokeStyle=$('color').value;d.lineCap='round';d.lineJoin='round';d.globalCompositeOperation=tool==='eraser'?'destination-out':'source-over';if(tool==='eraser')d.lineWidth*=3;d.beginPath();if(tool==='pen'||tool==='eraser'){d.moveTo(last.x,last.y);d.lineTo(p.x,p.y)}d.stroke();d.globalCompositeOperation='source-over'}
 document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x===b))});
 $('size').oninput=e=>$('size-value').textContent=e.target.value+' px';
 canvas.onpointerdown=e=>{
@@ -26,11 +33,7 @@ canvas.onpointerdown=e=>{
  else if(paste){paste.x=start.x;paste.y=start.y}
  else{
   snapshot();
-  if(['line','rect','ellipse'].includes(tool)){
-   shapeBaseCanvas=document.createElement('canvas');
-   shapeBaseCanvas.width=activeDraw.width;shapeBaseCanvas.height=activeDraw.height;
-   shapeBaseCanvas.getContext('2d').drawImage(activeDraw,0,0);
-  }
+  if(['line','rect','ellipse'].includes(tool))shapePreviewEnd={...start};
  }
 };
 canvas.onpointermove=e=>{
@@ -38,26 +41,25 @@ canvas.onpointermove=e=>{
  const p=point(e);
  if(tool==='select'){selection=rect(start,p);render();return}
  if(paste){paste.x=p.x;paste.y=p.y;render();return}
- if(['line','rect','ellipse'].includes(tool)&&shapeBaseCanvas){
-  const d=dctx();d.clearRect(0,0,activeDraw.width,activeDraw.height);
-  d.drawImage(shapeBaseCanvas,0,0);
-  paint(p);
- }else if(tool==='pen'||tool==='eraser')paint(p);
+ if(['line','rect','ellipse'].includes(tool)){shapePreviewEnd=p}
+ else if(tool==='pen'||tool==='eraser')paint(p);
  last=p;render();
 };
-canvas.onpointerup=async()=>{
+canvas.onpointerup=async e=>{
  if(!drawing)return;
- drawing=false;
+ const p=point(e);drawing=false;
+ if(['line','rect','ellipse'].includes(tool)){
+  // Commit exactly one final shape to the drawing layer. The live preview
+  // was drawn only on the display canvas, never into activeDraw.
+  drawShape(dctx(),start,p);shapePreviewEnd=null;
+ }
  if(paste){dctx().drawImage(paste.img,paste.x,paste.y);paste=null}
  if(selection)selection=rect(start,{x:start.x+selection.w,y:start.y+selection.h});
- shapeBaseCanvas=null;
  await saveActive();render();timeline();
 };
 canvas.onpointercancel=async()=>{
  if(!drawing)return;
- drawing=false;
- if(shapeBaseCanvas){const d=dctx();d.clearRect(0,0,activeDraw.width,activeDraw.height);d.drawImage(shapeBaseCanvas,0,0)}
- shapeBaseCanvas=null;
+ drawing=false;shapePreviewEnd=null;
  await saveActive();render();
 };
 async function createFFmpegInstance(){
