@@ -6,7 +6,30 @@ const key=(kind)=>kind+'-'+Date.now().toString(36)+'-'+(++frameSeq).toString(36)
 function blankFrame(time=0){return {baseKey:null,drawKey:null,textKey:null,time};}
 async function saveTextItems(){if(!frames.length)return;const f=frames[index],blob=new Blob([JSON.stringify(textItems)],{type:'application/json'});const k=key('text');await FrameStore.put(k,blob);if(f.textKey)await FrameStore.del(f.textKey);f.textKey=k}
 function drawTextItems(target,items=textItems,handles=false){items.forEach((o,i)=>{target.save();target.font=`${o.bold?'bold ':''}${o.size}px ${o.font||'Arial'}`;target.fillStyle=o.color;target.textBaseline='top';const lines=String(o.text).split(/\r?\n/);lines.forEach((line,j)=>{const y=o.y+j*o.size*1.2;target.fillText(line,o.x,y);if(o.underline){const w=target.measureText(line).width;target.beginPath();target.lineWidth=Math.max(1,o.size/16);target.strokeStyle=o.color;target.moveTo(o.x,y+o.size*1.05);target.lineTo(o.x+w,y+o.size*1.05);target.stroke()}});if(handles&&i===textSelectionIndex){target.strokeStyle='#8878ff';target.lineWidth=2;target.setLineDash([5,3]);target.strokeRect(o.x-3,o.y-3,o.w+6,o.h+6);target.setLineDash([]);target.fillStyle='#8878ff';target.fillRect(o.x+o.w-6,o.y+o.h-6,12,12)}target.restore()})}
-let textEditor=null,textEditorIndex=-1;
+let textEditor=null,textEditorIndex=-1,textFontControl=null,textFontSelect=null;
+function updateTextFontControl(){
+ if(!textFontControl||!textFontSelect)return;
+ const visible=tool==='cursor'&&!textEditor&&textSelectionIndex>=0&&!!textItems[textSelectionIndex]?.text;
+ textFontControl.hidden=!visible;textFontSelect.hidden=true;
+ if(!visible)return;
+ const o=textItems[textSelectionIndex],cr=canvas.getBoundingClientRect(),sr=$('stage').getBoundingClientRect();
+ textFontControl.style.left=(cr.left-sr.left+(o.x+o.w)*cr.width/canvas.width-8)+'px';
+ textFontControl.style.top=(cr.top-sr.top+o.y*cr.height/canvas.height-8)+'px';
+ textFontSelect.style.left=(cr.left-sr.left+(o.x+o.w)*cr.width/canvas.width-150)+'px';
+ textFontSelect.style.top=(cr.top-sr.top+o.y*cr.height/canvas.height+4)+'px';
+ textFontSelect.value=o.font||'Arial';
+}
+function initTextFontControl(){
+ const stage=$('stage');
+ textFontControl=document.createElement('button');textFontControl.type='button';textFontControl.className='text-font-toggle';textFontControl.textContent='T';textFontControl.title='Change font';textFontControl.setAttribute('aria-label','Change font');textFontControl.hidden=true;
+ textFontSelect=document.createElement('select');textFontSelect.className='text-font-select';textFontSelect.setAttribute('aria-label','Font family');textFontSelect.hidden=true;
+ ['Arial','Georgia','Times New Roman','Courier New','Verdana','Trebuchet MS'].forEach(name=>{const option=document.createElement('option');option.value=name;option.textContent=name;textFontSelect.append(option)});
+ textFontControl.addEventListener('pointerdown',e=>e.stopPropagation());
+ textFontControl.addEventListener('click',e=>{e.stopPropagation();textFontSelect.hidden=!textFontSelect.hidden;if(!textFontSelect.hidden)textFontSelect.focus()});
+ textFontSelect.addEventListener('pointerdown',e=>e.stopPropagation());
+ textFontSelect.addEventListener('change',async()=>{const o=textItems[textSelectionIndex];if(!o)return;o.font=textFontSelect.value;await saveTextItems();render();timeline()});
+ stage.append(textFontControl,textFontSelect);
+}
 function openTextEditor(i,x,y){
  if(textEditor)finishTextEditor();
  const existing=i>=0?textItems[i]:null;
@@ -17,14 +40,9 @@ function openTextEditor(i,x,y){
  textEditor.style.width=Math.max(130,o.w*cr.width/canvas.width)+'px';textEditor.style.minHeight=Math.max(35,o.h*cr.height/canvas.height)+'px';
  textEditor.style.fontSize=(o.size*cr.width/canvas.width)+'px';textEditor.style.color=o.color;textEditor.style.fontFamily=o.font||'Arial';
  textEditor.style.fontWeight=o.bold?'bold':'normal';textEditor.style.textDecoration=o.underline?'underline':'none';stage.appendChild(textEditor);
- const toolbar=document.createElement('div');toolbar.className='canvas-text-toolbar';toolbar.style.left=(cr.left-sr.left+(o.x+Math.max(130,o.w))*cr.width/canvas.width-31)+'px';toolbar.style.top=(cr.top-sr.top+o.y*cr.height/canvas.height+2)+'px';
- const fontButton=document.createElement('button');fontButton.type='button';fontButton.className='text-font-toggle';fontButton.textContent='T';fontButton.title='Change font';fontButton.setAttribute('aria-label','Change font');
- const fontSelect=document.createElement('select');fontSelect.className='text-font-select';fontSelect.setAttribute('aria-label','Font family');fontSelect.hidden=true;
- ['Arial','Georgia','Times New Roman','Courier New','Verdana','Trebuchet MS'].forEach(name=>{const option=document.createElement('option');option.value=name;option.textContent=name;fontSelect.append(option)});fontSelect.value=o.font||'Arial';
- fontButton.addEventListener('mousedown',e=>e.preventDefault());fontButton.addEventListener('click',()=>{fontSelect.hidden=!fontSelect.hidden;if(!fontSelect.hidden)fontSelect.focus()});
- fontSelect.addEventListener('mousedown',e=>e.stopPropagation());fontSelect.addEventListener('change',()=>{o.font=fontSelect.value;textEditor.style.fontFamily=o.font;textEditor.focus()});toolbar.append(fontButton,fontSelect);stage.appendChild(toolbar);textEditor.toolbar=toolbar;
+
  textEditor.addEventListener('keydown',e=>{const mod=e.ctrlKey||e.metaKey;if(mod&&e.key.toLowerCase()==='b'){e.preventDefault();o.bold=!o.bold;textEditor.style.fontWeight=o.bold?'bold':'normal';return}if(mod&&e.key.toLowerCase()==='u'){e.preventDefault();o.underline=!o.underline;textEditor.style.textDecoration=o.underline?'underline':'none';return}if(e.key==='Escape'){e.preventDefault();cancelTextEditor()}if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();finishTextEditor()}})
- textEditor.addEventListener('blur',()=>{setTimeout(()=>{if(textEditor&&document.activeElement!==fontSelect&&document.activeElement!==fontButton)finishTextEditor()},0)});textEditor.focus();
+ textEditor.addEventListener('blur',()=>{setTimeout(()=>{if(textEditor)finishTextEditor()},0)});textEditor.focus();
 }
 async function finishTextEditor(){if(!textEditor)return;const editor=textEditor,i=textEditorIndex; textEditor=null;textEditorIndex=-1;const value=editor.value.trimEnd();editor.toolbar?.remove();editor.remove();if(i<0)return;if(!value.trim()){textItems.splice(i,1)}else{const o=textItems[i];o.text=value;const tc=ctx;tc.font=`${o.bold?'bold ':''}${o.size}px ${o.font}`;const lines=value.split(/\r?\n/);o.w=Math.max(30,...lines.map(line=>tc.measureText(line).width));o.h=Math.max(o.size,lines.length*o.size*1.2)}await saveTextItems();render();timeline()}
 function cancelTextEditor(){if(!textEditor)return;const i=textEditorIndex;textEditor.toolbar?.remove();textEditor.remove();textEditor=null;textEditorIndex=-1;if(i>=0&&!textItems[i]?.text)textItems.splice(i,1);render()}
@@ -34,7 +52,7 @@ async function storeBlob(kind,blob,frame){if(!blob)return;const k=key(kind);awai
 async function saveActive(){if(!frames.length||!activeDrawDirty)return;const blob=await new Promise(r=>activeDraw.toBlob(r,'image/webp',.72));await storeBlob('draw',blob,frames[index]);activeDrawDirty=false}
 async function bitmapFromKey(k){const blob=await FrameStore.get(k);return blob?await createImageBitmap(blob):null}
 async function loadFrame(i){if(!frames.length)return;await saveActive();index=Math.max(0,Math.min(frames.length-1,i));const token=++loadToken,frame=frames[index];activeDraw.width=canvas.width;activeDraw.height=canvas.height;activeBase=null;activeDrawDirty=false;textItems=[];try{if(frame.textKey){const tb=await FrameStore.get(frame.textKey);if(tb)textItems=JSON.parse(await tb.text())}activeBase=await bitmapFromKey(frame.baseKey);if(token!==loadToken){activeBase?.close?.();return}const draw=await bitmapFromKey(frame.drawKey);if(draw){dctx().drawImage(draw,0,0);draw.close?.()}}catch(err){$('status').textContent='Could not load frame from local storage: '+err.message}selection=null;paste=null;textSelectionIndex=-1;await render();timeline()}
-async function render(){ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);if(activeBase)ctx.drawImage(activeBase,0,0,canvas.width,canvas.height);ctx.drawImage(activeDraw,0,0);drawTextItems(ctx,textItems,tool==='text'||tool==='cursor');if(shapePreviewEnd&&['line','rect','ellipse'].includes(tool))drawShape(ctx,start,shapePreviewEnd);if(selection){ctx.save();ctx.setLineDash([7,4]);ctx.strokeStyle='#7665ef';ctx.lineWidth=2;ctx.strokeRect(selection.x,selection.y,selection.w,selection.h);ctx.restore()}if(paste)ctx.drawImage(paste.img,paste.x,paste.y);$('count').textContent='Frame '+(index+1)+' / '+frames.length;$('scrub').max=Math.max(0,frames.length-1);$('scrub').value=index;$('timeline-count').textContent=frames.length+' frame'+(frames.length===1?'':'s');$('canvas-label').textContent=canvas.width+' × '+canvas.height;$('empty-state').hidden=frames.length>0;$('media-placeholder').hidden=!!videoFile||!!audioFile}
+async function render(){ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);if(activeBase)ctx.drawImage(activeBase,0,0,canvas.width,canvas.height);ctx.drawImage(activeDraw,0,0);drawTextItems(ctx,textItems,tool==='text'||tool==='cursor');if(shapePreviewEnd&&['line','rect','ellipse'].includes(tool))drawShape(ctx,start,shapePreviewEnd);if(selection){ctx.save();ctx.setLineDash([7,4]);ctx.strokeStyle='#7665ef';ctx.lineWidth=2;ctx.strokeRect(selection.x,selection.y,selection.w,selection.h);ctx.restore()}if(paste)ctx.drawImage(paste.img,paste.x,paste.y);updateTextFontControl();$('count').textContent='Frame '+(index+1)+' / '+frames.length;$('scrub').max=Math.max(0,frames.length-1);$('scrub').value=index;$('timeline-count').textContent=frames.length+' frame'+(frames.length===1?'':'s');$('canvas-label').textContent=canvas.width+' × '+canvas.height;$('empty-state').hidden=frames.length>0;$('media-placeholder').hidden=!!videoFile||!!audioFile}
 function timeline(){const wrap=$('timeline');wrap.innerHTML='';const observer=new IntersectionObserver(entries=>{for(const entry of entries){if(entry.isIntersecting){const item=entry.target;observer.unobserve(item);drawThumb(frames[+item.dataset.frame],item.querySelector('canvas'))}}},{root:wrap,rootMargin:'100px'});frames.forEach((f,i)=>{const item=document.createElement('div');item.className='thumb'+(i===index?' active':'');item.dataset.frame=i;item.title='Frame '+(i+1);const thumb=document.createElement('canvas');thumb.width=152;thumb.height=76;const t=thumb.getContext('2d');t.fillStyle='#fff';t.fillRect(0,0,152,76);item.append(thumb);const label=document.createElement('small');label.textContent=i+1;item.append(label);item.onclick=()=>loadFrame(i);wrap.append(item);observer.observe(item)});updateAudioTrack()}
 async function drawThumb(f,thumb){const t=thumb.getContext('2d');try{const b=await bitmapFromKey(f.baseKey);if(b){t.drawImage(b,0,0,thumb.width,thumb.height);b.close?.()}const d=await bitmapFromKey(f.drawKey);if(d){t.drawImage(d,0,0,thumb.width,thumb.height);d.close?.()}}catch(e){console.warn('Thumbnail load failed',e)}}
 function updateAudioTrack(){
@@ -91,8 +109,9 @@ async function deleteSelectedText(){
 }
 
 function updateToolCursor(){const cursor=tool==='cursor'?'default':tool==='eraser'?'cell':'crosshair';canvas.style.cursor=cursor;$('stage').style.cursor=cursor;$('empty-state').style.pointerEvents='none';$('stage').classList.toggle('text-tool-active',tool==='text');}
-document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x===b));updateToolCursor();}));
+document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x===b));updateToolCursor();render();}));
 updateToolCursor();
+initTextFontControl();
 $('size').oninput=e=>$('size-value').textContent=e.target.value+' px';
 canvas.onpointerdown=e=>{
  if(!frames.length)return;
