@@ -132,3 +132,47 @@ select{border:1px solid #d5d1c7;border-radius:6px;background:#f1efe9;color:#3435
 .stage .text-font-select{border:1px solid #c9c2d0;border-radius:6px;box-shadow:0 4px 12px #30291b20}
 .stage .text-font-option:hover,.stage .text-font-option.selected{background:#f1e9f4;color:#3a0770}
 @media(max-width:760px){.topbar{background:#f7f5f0}.app-shell{padding:9px}.editor{min-height:65vh}}
+
+
+/* Fixed corner theme switch */
+.theme-toggle{position:fixed;left:16px;bottom:16px;z-index:1000;width:38px;height:38px;display:grid;place-items:center;border:1px solid #c9c3b8;border-radius:50%;background:#f7f5f0;color:#ad5b3d;font:24px/1 Georgia,serif;box-shadow:0 2px 8px #30291b20;cursor:pointer}
+.theme-toggle:hover{background:#fff;transform:translateY(-1px)}
+body.dark-mode{color-scheme:dark;--bg:#171918;--panel:#222522;--panel-2:#2a2e29;--line:#3b4039;--muted:#a0a497;--text:#e8e8df;--accent:#c17b5b;--accent-2:#d09270;background:#171918;color:#e8e8df}
+body.dark-mode .topbar{background:#20231f;border-color:#383d36}
+body.dark-mode .brand{color:#e8e8df}
+body.dark-mode .brand small,body.dark-mode .project-status,body.dark-mode .hint,body.dark-mode .zoom-label,body.dark-mode .color-row,body.dark-mode .frame-readout span,body.dark-mode .timeline-header span:last-child{color:#a0a497}
+body.dark-mode .panel,body.dark-mode .editor{background:#222522;border-color:#3b4039;box-shadow:0 2px 8px #0002}
+body.dark-mode .panel h2,body.dark-mode .workspace-toolbar strong{color:#e2e2d8}
+body.dark-mode .tool{background:#2b2f2a;border-color:#41463e;color:#d0d1c7}
+body.dark-mode .tool span{color:#c3c5b9}
+body.dark-mode .tool:hover{background:#343930;border-color:#555b50}
+body.dark-mode .tool.active{background:#49392f;border-color:#c17b5b;color:#fff;box-shadow:inset 3px 0 #c17b5b}
+body.dark-mode .tool.active span,body.dark-mode .label-row output{color:#e0a080}
+body.dark-mode .control-group label,body.dark-mode .eyebrow{color:#b4b5a9}
+body.dark-mode select,body.dark-mode input[type=color]{background:#2b2f2a;border-color:#4a5047;color:#e8e8df}
+body.dark-mode .button-secondary{background:#30352e;border-color:#4a5047;color:#e5e5db}
+body.dark-mode .button-secondary:hover{background:#3a4037;border-color:#62695c}
+body.dark-mode .button-primary{background:#ad6244;border-color:#ad6244;color:#fff}
+body.dark-mode .divider,body.dark-mode .timeline-wrap{border-color:#3b4039;background-color:#3b4039}
+body.dark-mode .stage{border-color:#454a42;background-color:#292d28;background-image:linear-gradient(45deg,#333831 25%,transparent 25%),linear-gradient(-45deg,#333831 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#333831 75%),linear-gradient(-45deg,transparent 75%,#333831 75%)}
+body.dark-mode .stage canvas{box-shadow:0 3px 12px #0008}
+body.dark-mode .empty-state{color:#e8e8df}
+body.dark-mode .empty-state p{color:#a0a497}
+body.dark-mode .transport-buttons button{background:#30352e;border-color:#4a5047;color:#e5e5db}
+body.dark-mode .transport-buttons .play-button{background:#ad6244;border-color:#ad6244}
+body.dark-mode .thumb{border-color:#4a5047}
+body.dark-mode .thumb.active{border-color:#d09270;box-shadow:0 0 0 2px #d0927030}
+body.dark-mode .media-preview{background:#292d28;border-color:#555b50}
+body.dark-mode #media-placeholder,body.dark-mode #media-placeholder strong{color:#c4c5ba}
+body.dark-mode .export-note{background:#2b2f2a;border-color:#454b42}
+body.dark-mode .export-note p,body.dark-mode .status-line{color:#b4b5a9}
+body.dark-mode .memory-card{background:#2c332b;border-color:#4b5947}
+body.dark-mode .memory-card p{color:#b5c0a9}
+body.dark-mode .preview-dialog{background:#222522;border-color:#454a42;color:#e8e8df}
+body.dark-mode .preview-dialog::backdrop{background:#000b}
+body.dark-mode .audio-track-title{color:#c4c5ba}
+body.dark-mode .audio-track-lane{background:repeating-linear-gradient(90deg,#292f29 0,#292f29 75px,#3b4339 76px,#3b4339 82px);border-color:#454d43}
+body.dark-mode .audio-track-empty{color:#a0a497}
+body.dark-mode .theme-toggle{background:#2b2f2a;border-color:#596052;color:#e8d28b;box-shadow:0 2px 8px #0005}
+body.dark-mode .theme-toggle:hover{background:#383e35}
+@media(max-width:760px){.theme-toggle{left:12px;bottom:12px;width:36px;height:36px}}
