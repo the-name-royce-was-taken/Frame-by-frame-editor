@@ -2,3 +2,10 @@
 .audio-track-row{display:flex;flex-direction:column;gap:6px;overflow:visible;padding:4px 0 8px}.audio-track-row[hidden]{display:none}.audio-track-title{font-size:10px;color:#aeb9cb}.audio-track-lane{position:relative;height:34px;min-width:76px;border:1px solid #303b4d;border-radius:6px;background:repeating-linear-gradient(90deg,#1b2530 0,#1b2530 75px,#293343 76px,#293343 82px);overflow:hidden}.audio-track-clip{position:absolute;top:3px;bottom:3px;left:0;min-width:24px;border:1px solid #5ac5a2;border-radius:5px;background:linear-gradient(90deg,#245d56,#287b68);color:#eafff8;display:flex;align-items:center;padding:0 9px;font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;cursor:grab;touch-action:none;user-select:none}.audio-track-clip:active{cursor:grabbing}.timeline-wrap{overflow-x:auto}.timeline{width:max-content}.audio-track-row{width:max-content;min-width:100%}
 
 .timeline-actions{display:flex;align-items:center;gap:10px}.audio-upload-button{padding:6px 10px;font-size:10px}.audio-track-row[hidden]{display:none!important}.audio-track-scroll{width:100%;overflow-x:auto;overflow-y:hidden;padding-bottom:3px}.audio-track-lane{width:100%;min-width:100%;}
+
+/* Keep the soundtrack lane visible even when the project has no audio. */
+.audio-track-row{display:flex!important;min-height:48px}
+.audio-track-row[hidden]{display:flex!important}
+.audio-track-lane{min-height:34px;overflow:hidden}
+.audio-track-clip[hidden],.audio-track-empty[hidden]{display:none!important}
+.audio-track-empty{position:absolute;inset:0;display:flex;align-items:center;padding:0 10px;color:#7f8da1;font-size:10px;pointer-events:none}
