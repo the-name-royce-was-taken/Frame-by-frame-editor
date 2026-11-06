@@ -14,17 +14,16 @@ Open [the GitHub Pages site](https://the-name-royce-was-taken.github.io/Frame-by
 
 ## Memory-conscious design
 
-- Imported source frames are encoded as JPEG blobs rather than retaining a full-resolution canvas per frame.
-- Only the current drawing layer is held as a full-resolution canvas. It is serialized to a PNG blob when switching frames.
-- Source frame bitmaps use a small LRU cache (3 decoded frames); evicted `ImageBitmap` objects are closed where supported.
-- Thumbnail canvases are small and drawn on demand.
-- Import is capped at 900 frames to reduce the chance of browser tab exhaustion. For a 25 fps source, this corresponds to about 36 seconds.
+- Video import captures every decoded source frame instead of sampling at a selected FPS.
+- Frames are compressed as WebP and stored individually in the browser's Origin Private File System at `FrameForgeProject/frames`, with IndexedDB fallback.
+- The active frame and visible timeline thumbnails are decoded only when needed.
+- The original video stays attached to the preview so source audio plays in sync with frame playback.
 - FFmpeg is loaded only when a non-WebM export is requested.
 
 ## Features
 
 - Import video (MOV/MP4 supported by the browser) and audio files
-- Frame extraction, playback, frame stepping and blank-frame insertion
+- Native-frame extraction, audio-synced playback, frame stepping and blank-frame insertion
 - Pen, eraser, line, rectangle, ellipse and selection tools
 - Copy/paste selected drawing regions between frames
 - WebM export with browser MediaRecorder
