@@ -5,6 +5,7 @@ activeDraw.width=canvas.width;activeDraw.height=canvas.height;
 const key=(kind)=>kind+'-'+Date.now().toString(36)+'-'+(++frameSeq).toString(36);
 function blankFrame(time=0){return {baseKey:null,drawKey:null,textKey:null,time};}
 async function saveTextItems(){if(!frames.length)return;const f=frames[index],blob=new Blob([JSON.stringify(textItems)],{type:'application/json'});const k=key('text');await FrameStore.put(k,blob);if(f.textKey)await FrameStore.del(f.textKey);f.textKey=k}
+function fitTextBounds(o){const target=ctx;target.save();target.font=`${o.bold?'bold ':''}${o.size}px ${o.font||'Arial'}`;const lines=String(o.text||'').split(/\r?\n/);o.w=Math.max(20,...lines.map(line=>target.measureText(line).width));o.h=Math.max(o.size,lines.length*o.size*1.2);target.restore()}
 function drawTextItems(target,items=textItems,handles=false){items.forEach((o,i)=>{target.save();target.font=`${o.bold?'bold ':''}${o.size}px ${o.font||'Arial'}`;target.fillStyle=o.color;target.textBaseline='top';const lines=String(o.text).split(/\r?\n/);lines.forEach((line,j)=>{const y=o.y+j*o.size*1.2;target.fillText(line,o.x,y);if(o.underline){const w=target.measureText(line).width;target.beginPath();target.lineWidth=Math.max(1,o.size/16);target.strokeStyle=o.color;target.moveTo(o.x,y+o.size*1.05);target.lineTo(o.x+w,y+o.size*1.05);target.stroke()}});if(handles&&i===textSelectionIndex){target.strokeStyle='#8878ff';target.lineWidth=2;target.setLineDash([5,3]);target.strokeRect(o.x-3,o.y-3,o.w+6,o.h+6);target.setLineDash([]);target.fillStyle='#8878ff';target.fillRect(o.x+o.w-6,o.y+o.h-6,12,12)}target.restore()})}
 let textEditor=null,textEditorIndex=-1,textFontControl=null,textFontSelect=null;
 function updateTextFontControl(){
@@ -27,7 +28,7 @@ function initTextFontControl(){
  textFontControl.addEventListener('pointerdown',e=>e.stopPropagation());
  textFontControl.addEventListener('click',e=>{e.stopPropagation();textFontSelect.hidden=!textFontSelect.hidden;if(!textFontSelect.hidden)textFontSelect.focus()});
  textFontSelect.addEventListener('pointerdown',e=>e.stopPropagation());
- textFontSelect.addEventListener('change',async()=>{const o=textItems[textSelectionIndex];if(!o)return;o.font=textFontSelect.value;await saveTextItems();render();timeline()});
+ textFontSelect.addEventListener('change',async()=>{const o=textItems[textSelectionIndex];if(!o)return;o.font=textFontSelect.value;fitTextBounds(o);await saveTextItems();render();timeline()});
  stage.append(textFontControl,textFontSelect);
 }
 function openTextEditor(i,x,y){
@@ -146,7 +147,7 @@ canvas.addEventListener('click',e=>{
 canvas.onpointermove=e=>{
  if(!drawing)return;
  const p=point(e);
- if((tool==='text'||tool==='cursor')&&textDrag){const o=textItems[textDrag.index],dx=p.x-textDrag.x,dy=p.y-textDrag.y;if(textDrag.mode==='resize'){o.w=Math.max(20,textDrag.ow+dx);o.h=Math.max(o.size,textDrag.oh+dy);o.size=Math.max(8,Math.min(300,textDrag.os+dx*.35))}else{o.x=textDrag.ox+dx;o.y=textDrag.oy+dy}render();return}
+ if((tool==='text'||tool==='cursor')&&textDrag){const o=textItems[textDrag.index],dx=p.x-textDrag.x,dy=p.y-textDrag.y;if(textDrag.mode==='resize'){o.size=Math.max(8,Math.min(300,textDrag.os+dx*.35));fitTextBounds(o)}else{o.x=textDrag.ox+dx;o.y=textDrag.oy+dy}render();return}
  if(tool==='select'){selection=rect(start,p);render();return}
  if(paste){paste.x=p.x-(paste.dragOffset?.x||0);paste.y=p.y-(paste.dragOffset?.y||0);render();return}
  if(['line','rect','ellipse'].includes(tool)){shapePreviewEnd=p}
@@ -262,7 +263,7 @@ $('text-paste').onclick=pasteSelectedText;
 window.addEventListener('keydown',e=>{
  if(textEditor)return;
  const mod=e.ctrlKey||e.metaKey;
- if(mod&&(e.key.toLowerCase()==='b'||e.key.toLowerCase()==='u')&&tool==='cursor'&&textSelectionIndex>=0&&textItems[textSelectionIndex]){e.preventDefault();const o=textItems[textSelectionIndex];if(e.key.toLowerCase()==='b')o.bold=!o.bold;else o.underline=!o.underline;saveTextItems().then(()=>{render();timeline()});return}
+ if(mod&&(e.key.toLowerCase()==='b'||e.key.toLowerCase()==='u')&&tool==='cursor'&&textSelectionIndex>=0&&textItems[textSelectionIndex]){e.preventDefault();const o=textItems[textSelectionIndex];if(e.key.toLowerCase()==='b'){o.bold=!o.bold;fitTextBounds(o)}else o.underline=!o.underline;saveTextItems().then(()=>{render();timeline()});return}
  if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();$('undo').click();return}
  if(mod&&e.key.toLowerCase()==='c'){e.preventDefault();if(tool==='cursor'&&textSelectionIndex>=0)copySelectedText(false);else $('copy').click();return}
  if(mod&&e.key.toLowerCase()==='x'){if(tool==='cursor'&&textSelectionIndex>=0){e.preventDefault();copySelectedText(true)}return}
