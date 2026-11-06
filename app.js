@@ -8,27 +8,28 @@ async function saveTextItems(){if(!frames.length)return;const f=frames[index],bl
 function fitTextBounds(o){const target=ctx;target.save();target.font=`${o.bold?'bold ':''}${o.size}px ${o.font||'Arial'}`;const lines=String(o.text||'').split(/\r?\n/);o.w=Math.max(20,...lines.map(line=>target.measureText(line).width));o.h=Math.max(o.size,lines.length*o.size*1.2);target.restore()}
 function drawTextItems(target,items=textItems,handles=false){items.forEach((o,i)=>{target.save();target.font=`${o.bold?'bold ':''}${o.size}px ${o.font||'Arial'}`;target.fillStyle=o.color;target.textBaseline='top';const lines=String(o.text).split(/\r?\n/);lines.forEach((line,j)=>{const y=o.y+j*o.size*1.2;target.fillText(line,o.x,y);if(o.underline){const w=target.measureText(line).width;target.beginPath();target.lineWidth=Math.max(1,o.size/16);target.strokeStyle=o.color;target.moveTo(o.x,y+o.size*1.05);target.lineTo(o.x+w,y+o.size*1.05);target.stroke()}});if(handles&&i===textSelectionIndex){target.strokeStyle='#8878ff';target.lineWidth=2;target.setLineDash([5,3]);target.strokeRect(o.x-3,o.y-3,o.w+6,o.h+6);target.setLineDash([]);target.fillStyle='#8878ff';target.fillRect(o.x+o.w-6,o.y+o.h-6,12,12)}target.restore()})}
 let textEditor=null,textEditorIndex=-1,textFontControl=null,textFontSelect=null;
+const textFontOptions=['Arial','Arial Black','Arial Narrow','Brush Script MT','Comic Sans MS','Courier New','Georgia','Impact','Lucida Console','Lucida Sans Unicode','Palatino Linotype','Tahoma','Times New Roman','Trebuchet MS','Verdana','Garamond','Bookman Old Style','Century Gothic','Franklin Gothic Medium','Gill Sans','Helvetica','Monaco','Copperplate','Papyrus','system-ui'];
 function updateTextFontControl(){
  if(!textFontControl||!textFontSelect)return;
  const visible=tool==='cursor'&&!textEditor&&textSelectionIndex>=0&&!!textItems[textSelectionIndex]?.text;
- textFontControl.hidden=!visible;textFontSelect.hidden=true;
+ textFontControl.hidden=!visible;
+ if(!visible)textFontSelect.hidden=true;
  if(!visible)return;
  const o=textItems[textSelectionIndex],cr=canvas.getBoundingClientRect(),sr=$('stage').getBoundingClientRect();
  textFontControl.style.left=(cr.left-sr.left+(o.x+o.w)*cr.width/canvas.width-8)+'px';
  textFontControl.style.top=(cr.top-sr.top+o.y*cr.height/canvas.height-8)+'px';
  textFontSelect.style.left=(cr.left-sr.left+(o.x+o.w)*cr.width/canvas.width-150)+'px';
  textFontSelect.style.top=(cr.top-sr.top+o.y*cr.height/canvas.height+4)+'px';
- textFontSelect.value=o.font||'Arial';
+ [...textFontSelect.children].forEach(item=>item.classList.toggle('selected',item.dataset.font===(o.font||'Arial')));
 }
 function initTextFontControl(){
  const stage=$('stage');
  textFontControl=document.createElement('button');textFontControl.type='button';textFontControl.className='text-font-toggle';textFontControl.textContent='T';textFontControl.title='Change font';textFontControl.setAttribute('aria-label','Change font');textFontControl.hidden=true;
- textFontSelect=document.createElement('select');textFontSelect.className='text-font-select';textFontSelect.setAttribute('aria-label','Font family');textFontSelect.hidden=true;
- ['Arial','Georgia','Times New Roman','Courier New','Verdana','Trebuchet MS'].forEach(name=>{const option=document.createElement('option');option.value=name;option.textContent=name;textFontSelect.append(option)});
+ textFontSelect=document.createElement('div');textFontSelect.className='text-font-select';textFontSelect.setAttribute('role','listbox');textFontSelect.setAttribute('aria-label','Font family');textFontSelect.hidden=true;
+ textFontOptions.forEach(name=>{const option=document.createElement('button');option.type='button';option.className='text-font-option';option.dataset.font=name;option.textContent=name;option.style.fontFamily=name;option.setAttribute('role','option');option.addEventListener('pointerdown',e=>e.stopPropagation());option.addEventListener('click',async e=>{e.stopPropagation();const o=textItems[textSelectionIndex];if(!o)return;o.font=name;fitTextBounds(o);textFontSelect.hidden=true;await saveTextItems();render();timeline()});textFontSelect.append(option)});
  textFontControl.addEventListener('pointerdown',e=>e.stopPropagation());
- textFontControl.addEventListener('click',e=>{e.stopPropagation();textFontSelect.hidden=!textFontSelect.hidden;if(!textFontSelect.hidden)textFontSelect.focus()});
+ textFontControl.addEventListener('click',e=>{e.stopPropagation();textFontSelect.hidden=!textFontSelect.hidden;if(!textFontSelect.hidden)updateTextFontControl()});
  textFontSelect.addEventListener('pointerdown',e=>e.stopPropagation());
- textFontSelect.addEventListener('change',async()=>{const o=textItems[textSelectionIndex];if(!o)return;o.font=textFontSelect.value;fitTextBounds(o);await saveTextItems();render();timeline()});
  stage.append(textFontControl,textFontSelect);
 }
 function openTextEditor(i,x,y){
