@@ -19,8 +19,7 @@ function openTextEditor(i,x,y){
  textEditor.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();cancelTextEditor()}if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();finishTextEditor()}})
  textEditor.addEventListener('blur',()=>finishTextEditor());textEditor.focus();
 }
-async function finishTextEditor(){if(!textEditor)return;const editor=textEditor,i=textEditorIndex; textEditor=null;textEditorIndex=-1;const value=editor.value.trimEnd();editor.remove();if(i<0)return;if(!value.trim()){textItems.splice(i,1)}else{const o=textItems[i];o.text=value;const tc=ctx;tc.font=`${o.size}px ${o.font}`;const lines=value.split('
-');o.w=Math.max(30,...lines.map(line=>tc.measureText(line).width));o.h=Math.max(o.size,lines.length*o.size*1.2)}await saveTextItems();render();timeline()}
+async function finishTextEditor(){if(!textEditor)return;const editor=textEditor,i=textEditorIndex; textEditor=null;textEditorIndex=-1;const value=editor.value.trimEnd();editor.remove();if(i<0)return;if(!value.trim()){textItems.splice(i,1)}else{const o=textItems[i];o.text=value;const tc=ctx;tc.font=`${o.size}px ${o.font}`;const lines=value.split('\\n');o.w=Math.max(30,...lines.map(line=>tc.measureText(line).width));o.h=Math.max(o.size,lines.length*o.size*1.2)}await saveTextItems();render();timeline()}
 function cancelTextEditor(){if(!textEditor)return;const i=textEditorIndex;textEditor.remove();textEditor=null;textEditorIndex=-1;if(i>=0&&!textItems[i]?.text)textItems.splice(i,1);render()}
 function dctx(){return activeDraw.getContext('2d');}
 function resize(w,h){canvas.width=w;canvas.height=h;activeDraw.width=w;activeDraw.height=h;activeBase=null;}
