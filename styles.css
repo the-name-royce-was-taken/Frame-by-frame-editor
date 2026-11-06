@@ -25,3 +25,7 @@
 /* Cursor tool: selected text gets a clear resize grip. */
 .tool[data-tool=cursor]{grid-column:span 2}
 #stage canvas{cursor:default}
+
+/* Cursor and Select are equal-sized neighboring tools. */
+.tool[data-tool=cursor],.tool[data-tool=select]{grid-column:auto}
+.text-actions .button{font-size:11px}
