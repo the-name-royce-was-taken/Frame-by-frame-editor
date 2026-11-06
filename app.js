@@ -5,7 +5,7 @@ activeDraw.width=canvas.width;activeDraw.height=canvas.height;
 const key=(kind)=>kind+'-'+Date.now().toString(36)+'-'+(++frameSeq).toString(36);
 function blankFrame(time=0){return {baseKey:null,drawKey:null,textKey:null,time};}
 async function saveTextItems(){if(!frames.length)return;const f=frames[index],blob=new Blob([JSON.stringify(textItems)],{type:'application/json'});const k=key('text');await FrameStore.put(k,blob);if(f.textKey)await FrameStore.del(f.textKey);f.textKey=k}
-function drawTextItems(target,items=textItems,handles=false){items.forEach((o,i)=>{target.save();target.font=`${o.size}px ${o.font||'Arial'}`;target.fillStyle=o.color;target.textBaseline='top';const lines=String(o.text).split('\\n');lines.forEach((line,j)=>target.fillText(line,o.x,o.y+j*o.size*1.2));if(handles&&i===textItems.length-1){target.strokeStyle='#8878ff';target.lineWidth=2;target.setLineDash([5,3]);target.strokeRect(o.x-3,o.y-3,o.w+6,o.h+6);target.setLineDash([]);target.fillStyle='#8878ff';target.fillRect(o.x+o.w-6,o.y+o.h-6,12,12)}target.restore()})}
+function drawTextItems(target,items=textItems,handles=false){items.forEach((o,i)=>{target.save();target.font=`${o.size}px ${o.font||'Arial'}`;target.fillStyle=o.color;target.textBaseline='top';const lines=String(o.text).split(/\r?\n/);lines.forEach((line,j)=>target.fillText(line,o.x,o.y+j*o.size*1.2));if(handles&&i===textItems.length-1){target.strokeStyle='#8878ff';target.lineWidth=2;target.setLineDash([5,3]);target.strokeRect(o.x-3,o.y-3,o.w+6,o.h+6);target.setLineDash([]);target.fillStyle='#8878ff';target.fillRect(o.x+o.w-6,o.y+o.h-6,12,12)}target.restore()})}
 let textEditor=null,textEditorIndex=-1;
 function openTextEditor(i,x,y){
  if(textEditor)finishTextEditor();
@@ -19,7 +19,7 @@ function openTextEditor(i,x,y){
  textEditor.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();cancelTextEditor()}if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();finishTextEditor()}})
  textEditor.addEventListener('blur',()=>finishTextEditor());textEditor.focus();
 }
-async function finishTextEditor(){if(!textEditor)return;const editor=textEditor,i=textEditorIndex; textEditor=null;textEditorIndex=-1;const value=editor.value.trimEnd();editor.remove();if(i<0)return;if(!value.trim()){textItems.splice(i,1)}else{const o=textItems[i];o.text=value;const tc=ctx;tc.font=`${o.size}px ${o.font}`;const lines=value.split('\\n');o.w=Math.max(30,...lines.map(line=>tc.measureText(line).width));o.h=Math.max(o.size,lines.length*o.size*1.2)}await saveTextItems();render();timeline()}
+async function finishTextEditor(){if(!textEditor)return;const editor=textEditor,i=textEditorIndex; textEditor=null;textEditorIndex=-1;const value=editor.value.trimEnd();editor.remove();if(i<0)return;if(!value.trim()){textItems.splice(i,1)}else{const o=textItems[i];o.text=value;const tc=ctx;tc.font=`${o.size}px ${o.font}`;const lines=value.split(/\r?\n/);o.w=Math.max(30,...lines.map(line=>tc.measureText(line).width));o.h=Math.max(o.size,lines.length*o.size*1.2)}await saveTextItems();render();timeline()}
 function cancelTextEditor(){if(!textEditor)return;const i=textEditorIndex;textEditor.remove();textEditor=null;textEditorIndex=-1;if(i>=0&&!textItems[i]?.text)textItems.splice(i,1);render()}
 function dctx(){return activeDraw.getContext('2d');}
 function resize(w,h){canvas.width=w;canvas.height=h;activeDraw.width=w;activeDraw.height=h;activeBase=null;}
@@ -69,14 +69,19 @@ updateToolCursor();
 $('size').oninput=e=>$('size-value').textContent=e.target.value+' px';
 canvas.onpointerdown=e=>{
  if(!frames.length)return;
- canvas.setPointerCapture(e.pointerId);drawing=true;start=last=point(e);
- if(tool==='text'){const hit=textItems.findIndex(o=>start.x>=o.x-5&&start.x<=o.x+o.w+5&&start.y>=o.y-5&&start.y<=o.y+o.h+5);if(hit<0){openTextEditor(-1,start.x,start.y);drawing=false;return}const o=textItems[hit],resizeHit=start.x>=o.x+o.w-14&&start.y>=o.y+o.h-14;textDrag={index:hit,mode:resizeHit?'resize':'move',x:start.x,y:start.y,ox:o.x,oy:o.y,ow:o.w,oh:o.h,os:o.size};render();return}
+ drawing=true;start=last=point(e);
+ if(tool==='text'){
+  const hit=textItems.findIndex(o=>start.x>=o.x-5&&start.x<=o.x+o.w+5&&start.y>=o.y-5&&start.y<=o.y+o.h+5);
+  if(hit<0){openTextEditor(-1,start.x,start.y);drawing=false;return}
+  canvas.setPointerCapture(e.pointerId);
+  const o=textItems[hit],resizeHit=start.x>=o.x+o.w-14&&start.y>=o.y+o.h-14;
+  textDrag={index:hit,mode:resizeHit?'resize':'move',x:start.x,y:start.y,ox:o.x,oy:o.y,ow:o.w,oh:o.h,os:o.size};
+  render();return;
+ }
+ canvas.setPointerCapture(e.pointerId);
  if(tool==='select'){selection={...start,w:0,h:0};render()}
  else if(paste){paste.dragOffset={x:start.x-paste.x,y:start.y-paste.y}}
- else{
-  snapshot();
-  if(['line','rect','ellipse'].includes(tool))shapePreviewEnd={...start};
- }
+ else{snapshot();if(['line','rect','ellipse'].includes(tool))shapePreviewEnd={...start}}
 };
 canvas.onpointermove=e=>{
  if(!drawing)return;
