@@ -29,3 +29,5 @@
 /* Cursor and Select are equal-sized neighboring tools. */
 .tool[data-tool=cursor],.tool[data-tool=select]{grid-column:auto}
 .text-actions .button{font-size:11px}
+
+.canvas-text-toolbar{position:absolute;z-index:25;display:flex;align-items:center;gap:5px;padding:4px;background:#202735;border:1px solid #7568d8;border-radius:7px;box-shadow:0 4px 14px #0007}.text-font-toggle{width:25px;height:24px;padding:0;border:1px solid #5b6190;border-radius:5px;background:#39345f;color:#fff;font:700 14px Georgia,serif;cursor:pointer}.text-font-select{width:145px;max-width:45vw;padding:5px 7px;font-size:11px}.text-font-select[hidden]{display:none}
