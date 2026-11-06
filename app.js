@@ -30,7 +30,7 @@ canvas.onpointerdown=e=>{
  if(!frames.length)return;
  canvas.setPointerCapture(e.pointerId);drawing=true;start=last=point(e);
  if(tool==='select'){selection={...start,w:0,h:0};render()}
- else if(paste){paste.x=start.x;paste.y=start.y}
+ else if(paste){paste.dragOffset={x:start.x-paste.x,y:start.y-paste.y}}
  else{
   snapshot();
   if(['line','rect','ellipse'].includes(tool))shapePreviewEnd={...start};
@@ -40,7 +40,7 @@ canvas.onpointermove=e=>{
  if(!drawing)return;
  const p=point(e);
  if(tool==='select'){selection=rect(start,p);render();return}
- if(paste){paste.x=p.x;paste.y=p.y;render();return}
+ if(paste){paste.x=p.x-(paste.dragOffset?.x||0);paste.y=p.y-(paste.dragOffset?.y||0);render();return}
  if(['line','rect','ellipse'].includes(tool)){shapePreviewEnd=p}
  else if(tool==='pen'||tool==='eraser')paint(p);
  last=p;render();
