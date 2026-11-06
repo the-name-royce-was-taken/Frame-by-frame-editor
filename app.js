@@ -63,8 +63,8 @@ function drawShape(target,startPoint,endPoint){
  d.stroke();d.restore();
 }
 function paint(p){const d=dctx();d.lineWidth=+$('size').value;d.strokeStyle=$('color').value;d.lineCap='round';d.lineJoin='round';d.globalCompositeOperation=tool==='eraser'?'destination-out':'source-over';if(tool==='eraser')d.lineWidth*=3;d.beginPath();if(tool==='pen'||tool==='eraser'){d.moveTo(last.x,last.y);d.lineTo(p.x,p.y)}d.stroke();d.globalCompositeOperation='source-over'}
-function updateToolCursor(){canvas.style.cursor=tool==='text'?'crosshair':tool==='select'?'crosshair':tool==='eraser'?'cell':'crosshair';}
-document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x===b));updateToolCursor();});
+function updateToolCursor(){const cursor=tool==='eraser'?'cell':(tool==='text'||tool==='select')?'crosshair':'crosshair';canvas.style.cursor=cursor;$('stage').style.cursor=cursor;$('empty-state').style.pointerEvents='none';$('stage').classList.toggle('text-tool-active',tool==='text');}
+document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x===b));updateToolCursor();}));
 updateToolCursor();
 $('size').oninput=e=>$('size-value').textContent=e.target.value+' px';
 canvas.onpointerdown=e=>{
