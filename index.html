@@ -44,7 +44,7 @@
       <div class="transport">
         <div class="transport-buttons"><button id="prev" title="Previous frame">◀</button><button id="play" class="play-button">▶ Play</button><button id="next" title="Next frame">▶</button></div>
         <div class="frame-readout"><span id="count">Frame 1 / 1</span><input id="scrub" type="range" min="0" max="0" value="0"></div>
-        <button class="button button-secondary" id="add">＋ Add frame</button><button class="button button-primary" id="preview-open">Preview edited video</button>
+        <button class="button button-secondary" id="add">＋ Add frame</button>
       </div>
       <div class="timeline-wrap"><div class="timeline-header"><span class="eyebrow">TIMELINE</span><span id="timeline-count">1 frame</span></div><div class="timeline" id="timeline"></div></div>
     </section>
@@ -59,7 +59,7 @@
       <div class="memory-card"><span class="eyebrow">PERFORMANCE</span><strong>Memory-aware mode</strong><p>Frames are compressed and stored in the browser’s FrameForgeProject/frames folder, then decoded only when needed.</p></div>
     </aside>
   </main>
-  <dialog id="preview-dialog" class="preview-dialog"><div class="preview-dialog-header"><div><span class="eyebrow">PLAYBACK</span><h2>Edited video preview</h2></div><button class="button button-secondary" id="preview-close">Close preview</button></div><video id="preview-video" controls playsinline></video></dialog>\n  <script src="frame-store.js"></script>
+  <dialog id="preview-dialog" class="preview-dialog"><div class="preview-dialog-header"><div><span class="eyebrow">PLAYBACK</span><h2>Edited video preview</h2></div><div class="preview-dialog-actions"><label for="preview-speed">Speed</label><select id="preview-speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2×</option></select><button class="button button-secondary" id="preview-close">Close</button></div></div><video id="preview-video" controls playsinline></video></dialog>\n  <script src="frame-store.js"></script>
   <script type="module" src="app.js"></script>
 </body>
 </html>
