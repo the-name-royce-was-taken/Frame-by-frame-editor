@@ -68,7 +68,7 @@ $('size').oninput=e=>$('size-value').textContent=e.target.value+' px';
 canvas.onpointerdown=e=>{
  if(!frames.length)return;
  canvas.setPointerCapture(e.pointerId);drawing=true;start=last=point(e);
- if(tool==='text'){const hit=textItems.findIndex(o=>start.x>=o.x-5&&start.x<=o.x+o.w+5&&start.y>=o.y-5&&start.y<=o.y+o.h+5);openTextEditor(hit,start.x,start.y);drawing=false;return}
+ if(tool==='text'){const hit=textItems.findIndex(o=>start.x>=o.x-5&&start.x<=o.x+o.w+5&&start.y>=o.y-5&&start.y<=o.y+o.h+5);if(hit<0){openTextEditor(-1,start.x,start.y);drawing=false;return}const o=textItems[hit],resizeHit=start.x>=o.x+o.w-14&&start.y>=o.y+o.h-14;textDrag={index:hit,mode:resizeHit?'resize':'move',x:start.x,y:start.y,ox:o.x,oy:o.y,ow:o.w,oh:o.h,os:o.size};render();return}
  if(tool==='select'){selection={...start,w:0,h:0};render()}
  else if(paste){paste.dragOffset={x:start.x-paste.x,y:start.y-paste.y}}
  else{
@@ -79,7 +79,7 @@ canvas.onpointerdown=e=>{
 canvas.onpointermove=e=>{
  if(!drawing)return;
  const p=point(e);
- if(tool==='text'&&textDrag){const o=textItems[textDrag.index],dx=p.x-textDrag.x,dy=p.y-textDrag.y;if(textDrag.mode==='resize'){o.w=Math.max(20,textDrag.ow+dx);o.h=Math.max(o.size,textDrag.oh+dy);o.size=Math.max(8,Math.min(300,o.size+dx*.35))}else{o.x=textDrag.ox+dx;o.y=textDrag.oy+dy}render();return}
+ if(tool==='text'&&textDrag){const o=textItems[textDrag.index],dx=p.x-textDrag.x,dy=p.y-textDrag.y;if(textDrag.mode==='resize'){o.w=Math.max(20,textDrag.ow+dx);o.h=Math.max(o.size,textDrag.oh+dy);o.size=Math.max(8,Math.min(300,textDrag.os+dx*.35))}else{o.x=textDrag.ox+dx;o.y=textDrag.oy+dy}render();return}
  if(tool==='select'){selection=rect(start,p);render();return}
  if(paste){paste.x=p.x-(paste.dragOffset?.x||0);paste.y=p.y-(paste.dragOffset?.y||0);render();return}
  if(['line','rect','ellipse'].includes(tool)){shapePreviewEnd=p}
@@ -89,7 +89,7 @@ canvas.onpointermove=e=>{
 canvas.onpointerup=async e=>{
  if(!drawing)return;
  const p=point(e);drawing=false;
- if(tool==='text'&&textDrag){textDrag=null;await saveTextItems();render();timeline();return}
+ if(tool==='text'&&textDrag){const t=textDrag,dx=p.x-t.x,dy=p.y-t.y;textDrag=null;if(Math.abs(dx)+Math.abs(dy)<4){openTextEditor(t.index,p.x,p.y);return}await saveTextItems();render();timeline();return}
  if(['line','rect','ellipse'].includes(tool)){
   // Commit exactly one final shape to the drawing layer. The live preview
   // was drawn only on the display canvas, never into activeDraw.
