@@ -1,5 +1,5 @@
 const $=id=>document.getElementById(id),canvas=$('c'),ctx=canvas.getContext('2d',{alpha:false}),video=$('preview-video');
-let sourceVideo=null,stitchedPreviewUrl=null;
+let sourceVideo=null,stitchedPreviewUrl=null,shapeBaseCanvas=null;
 let frames=[],index=0,tool='pen',drawing=false,start,last,selection=null,clipboard=null,paste=null,audioFile=null,videoFile=null,undoStack=[],playTimer=null,activeDraw=document.createElement('canvas'),activeBase=null,frameSeq=0,loadToken=0,previewCallback=0,previewPlaying=false,frameDuration=1/30;
 activeDraw.width=canvas.width;activeDraw.height=canvas.height;
 const key=(kind)=>kind+'-'+Date.now().toString(36)+'-'+(++frameSeq).toString(36);
@@ -19,9 +19,47 @@ function rect(a,b){return{x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(b.x
 function paint(p){const d=dctx();d.lineWidth=+$('size').value;d.strokeStyle=$('color').value;d.lineCap='round';d.lineJoin='round';d.globalCompositeOperation=tool==='eraser'?'destination-out':'source-over';if(tool==='eraser')d.lineWidth*=3;d.beginPath();if(tool==='pen'||tool==='eraser'){d.moveTo(last.x,last.y);d.lineTo(p.x,p.y)}else{d.moveTo(start.x,start.y);if(tool==='line')d.lineTo(p.x,p.y);else if(tool==='rect')d.rect(start.x,start.y,p.x-start.x,p.y-start.y);else if(tool==='ellipse')d.ellipse((start.x+p.x)/2,(start.y+p.y)/2,Math.max(1,Math.abs(p.x-start.x)/2),Math.max(1,Math.abs(p.y-start.y)/2),0,0,Math.PI*2)}d.stroke();d.globalCompositeOperation='source-over'}
 document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x===b))});
 $('size').oninput=e=>$('size-value').textContent=e.target.value+' px';
-canvas.onpointerdown=e=>{if(!frames.length)return;canvas.setPointerCapture(e.pointerId);drawing=true;start=last=point(e);if(tool==='select'){selection={...start,w:0,h:0};render()}else if(paste){paste.x=start.x;paste.y=start.y}else snapshot()};
-canvas.onpointermove=e=>{if(!drawing)return;const p=point(e);if(tool==='select'){selection=rect(start,p);render();return}if(paste){paste.x=p.x;paste.y=p.y;render();return}if(tool==='pen'||tool==='eraser')paint(p);else{render();paint(p)}last=p;render()};
-canvas.onpointerup=async()=>{drawing=false;if(paste){dctx().drawImage(paste.img,paste.x,paste.y);paste=null}if(selection)selection=rect(start,{x:start.x+selection.w,y:start.y+selection.h});await saveActive();render();timeline()};
+canvas.onpointerdown=e=>{
+ if(!frames.length)return;
+ canvas.setPointerCapture(e.pointerId);drawing=true;start=last=point(e);
+ if(tool==='select'){selection={...start,w:0,h:0};render()}
+ else if(paste){paste.x=start.x;paste.y=start.y}
+ else{
+  snapshot();
+  if(['line','rect','ellipse'].includes(tool)){
+   shapeBaseCanvas=document.createElement('canvas');
+   shapeBaseCanvas.width=activeDraw.width;shapeBaseCanvas.height=activeDraw.height;
+   shapeBaseCanvas.getContext('2d').drawImage(activeDraw,0,0);
+  }
+ }
+};
+canvas.onpointermove=e=>{
+ if(!drawing)return;
+ const p=point(e);
+ if(tool==='select'){selection=rect(start,p);render();return}
+ if(paste){paste.x=p.x;paste.y=p.y;render();return}
+ if(['line','rect','ellipse'].includes(tool)&&shapeBaseCanvas){
+  const d=dctx();d.clearRect(0,0,activeDraw.width,activeDraw.height);
+  d.drawImage(shapeBaseCanvas,0,0);
+  paint(p);
+ }else if(tool==='pen'||tool==='eraser')paint(p);
+ last=p;render();
+};
+canvas.onpointerup=async()=>{
+ if(!drawing)return;
+ drawing=false;
+ if(paste){dctx().drawImage(paste.img,paste.x,paste.y);paste=null}
+ if(selection)selection=rect(start,{x:start.x+selection.w,y:start.y+selection.h});
+ shapeBaseCanvas=null;
+ await saveActive();render();timeline();
+};
+canvas.onpointercancel=async()=>{
+ if(!drawing)return;
+ drawing=false;
+ if(shapeBaseCanvas){const d=dctx();d.clearRect(0,0,activeDraw.width,activeDraw.height);d.drawImage(shapeBaseCanvas,0,0)}
+ shapeBaseCanvas=null;
+ await saveActive();render();
+};
 async function createFFmpegInstance(){
  const {FFmpeg}=await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js');
  const {toBlobURL}=await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js');
