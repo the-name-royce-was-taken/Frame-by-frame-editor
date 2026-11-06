@@ -15,7 +15,7 @@ function timeline(){const wrap=$('timeline');wrap.innerHTML='';const observer=ne
 async function drawThumb(f,thumb){const t=thumb.getContext('2d');try{const b=await bitmapFromKey(f.baseKey);if(b){t.drawImage(b,0,0,thumb.width,thumb.height);b.close?.()}const d=await bitmapFromKey(f.drawKey);if(d){t.drawImage(d,0,0,thumb.width,thumb.height);d.close?.()}}catch(e){console.warn('Thumbnail load failed',e)}}
 function updateAudioTrack(){
  const row=$('audio-track-row'),lane=$('audio-track-lane');if(!row||!lane)return;
- const visible=!!audioTrackSource&&frames.length>0;row.hidden=!visible;if(!visible)return;
+ const visible=!!audioTrackSource;row.hidden=!visible;if(!visible)return;
  const framePx=83,clipFrames=Math.max(1,Math.ceil((audioDuration||frames.length*frameDuration)/Math.max(.001,frameDuration)));
  const laneFrames=frames.length+clipFrames-1;
  lane.style.width=Math.max(76,laneFrames*framePx-7)+'px';
@@ -138,8 +138,17 @@ async function buildStitchedPreview(){
   video.addEventListener('error',()=>reject(Error('Chrome could not open the encoded preview video.')),{once:true});
  });
 }
+async function loadAudioTrack(f){
+ audioFile=f;audioTrackSource='file';audioOffsetFrame=0;
+ const url=URL.createObjectURL(f);$('aud').src=url;$('aud').hidden=false;
+ audioDuration=await new Promise(resolve=>{const probe=new Audio();probe.preload='metadata';probe.onloadedmetadata=()=>resolve(Number.isFinite(probe.duration)?probe.duration:0);probe.onerror=()=>resolve(0);probe.src=url});
+ if(!frames.length){frames=[blankFrame()];await loadFrame(0)}
+ $('info').textContent=f.name+' · separate audio track';$('status').textContent='Soundtrack loaded';updateAudioTrack();
+}
+$('audio-upload').onclick=()=>$('audio-file').click();
+$('audio-file').onchange=async e=>{const f=e.target.files?.[0];if(f)await loadAudioTrack(f);e.target.value=''};
 $('open').onclick=$('empty-import').onclick=()=>$('file').click();
-$('file').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;if(f.type.startsWith('audio')){audioFile=f;audioTrackSource='file';$('aud').src=URL.createObjectURL(f);$('aud').hidden=false;audioDuration=await new Promise(resolve=>{const probe=new Audio();probe.preload='metadata';probe.onloadedmetadata=()=>resolve(Number.isFinite(probe.duration)?probe.duration:0);probe.onerror=()=>resolve(0);probe.src=URL.createObjectURL(f)});audioOffsetFrame=0;$('info').textContent=f.name+' · separate audio track';if(!frames.length){frames=[blankFrame()];await loadFrame(0)}updateAudioTrack();return}
+$('file').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;if(f.type.startsWith('audio')){await loadAudioTrack(f);return}
 videoFile=f;audioFile=null;audioTrackSource='video';audioOffsetFrame=0;sourceVideo=document.createElement('video');sourceVideo.src=URL.createObjectURL(f);sourceVideo.preload='auto';sourceVideo.playsInline=true;sourceVideo.muted=true;$('info').textContent='Reading every decoded frame…';$('status').textContent='Extracting original frames…';await new Promise((resolve,reject)=>{sourceVideo.onloadedmetadata=resolve;sourceVideo.onerror=reject});audioDuration=Number.isFinite(sourceVideo.duration)?sourceVideo.duration:0;resize(sourceVideo.videoWidth,sourceVideo.videoHeight);frames=[];const temp=document.createElement('canvas');temp.width=canvas.width;temp.height=canvas.height;const tc=temp.getContext('2d',{alpha:false});let chain=Promise.resolve(),captured=0,lastTime=-1;frameDuration=1/30;await new Promise((resolve,reject)=>{let ended=false;const finish=()=>{if(ended)return;ended=true;sourceVideo.pause();resolve()};sourceVideo.onended=finish;sourceVideo.onerror=()=>reject(Error('Video decoding failed'));const capture=(now,meta)=>{if(ended)return;const stamp=meta.mediaTime;if(stamp>lastTime+0.000001){lastTime=stamp;tc.drawImage(sourceVideo,0,0,temp.width,temp.height);chain=chain.then(()=>new Promise(done=>temp.toBlob(async blob=>{try{if(blob){const frame=blankFrame(stamp);frame.baseKey=key('base');await FrameStore.put(frame.baseKey,blob);frames.push(frame);captured++;if(captured%30===0){$('status').textContent='Saved '+captured+' original frames…';await new Promise(r=>setTimeout(r,0))}}}finally{done()}},'image/webp',.72)))}if(sourceVideo.requestVideoFrameCallback)sourceVideo.requestVideoFrameCallback(capture);else finish()};if(sourceVideo.requestVideoFrameCallback)sourceVideo.requestVideoFrameCallback(capture);sourceVideo.play().catch(reject);setTimeout(finish,Math.ceil(sourceVideo.duration*1000)+5000)});await chain;sourceVideo.muted=false;frameDuration=frames.length>1?(frames[frames.length-1].time-frames[0].time)/(frames.length-1):1/30;await loadFrame(0);sourceVideo.currentTime=0;$('info').textContent=f.name+' · '+canvas.width+'×'+canvas.height+' · '+captured+' decoded frames · audio shown on separate timeline track';updateAudioTrack();$('status').textContent='Stitching smooth preview…';$('status').textContent='Frames imported · use Preview edited video to build playback';};
 $('prev').onclick=()=>loadFrame(index-1);$('next').onclick=()=>loadFrame(index+1);$('scrub').oninput=e=>loadFrame(+e.target.value);
 $('add').onclick=async()=>{await saveActive();frames.splice(index+1,0,blankFrame());await loadFrame(index+1)};
