@@ -29,9 +29,14 @@ async function buildStitchedPreview(){
  const {toBlobURL}=await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js');
  const ff=new FFmpeg();
  ff.on('log',({message})=>{if(message)$('status').textContent='Building playback: '+message.slice(-90)});
+ const ffmpegBase='https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm';
+ const coreBase='https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm';
  await ff.load({
-  coreURL:await toBlobURL('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.js','text/javascript'),
-  wasmURL:await toBlobURL('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.wasm','application/wasm')
+  // Convert the worker script to a same-origin blob URL. GitHub Pages blocks
+  // constructing a Worker directly from the cross-origin jsDelivr URL.
+  workerURL:await toBlobURL(ffmpegBase+'/worker.js','text/javascript'),
+  coreURL:await toBlobURL(coreBase+'/ffmpeg-core.js','text/javascript'),
+  wasmURL:await toBlobURL(coreBase+'/ffmpeg-core.wasm','application/wasm')
  });
  const fps=Math.max(1,Math.min(60,Math.round(1/Math.max(.001,frameDuration))));
  for(let i=0;i<frames.length;i++){
