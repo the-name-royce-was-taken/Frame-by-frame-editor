@@ -24,74 +24,52 @@ canvas.onpointermove=e=>{if(!drawing)return;const p=point(e);if(tool==='select')
 canvas.onpointerup=async()=>{drawing=false;if(paste){dctx().drawImage(paste.img,paste.x,paste.y);paste=null}if(selection)selection=rect(start,{x:start.x+selection.w,y:start.y+selection.h});await saveActive();render();timeline()};
 async function buildStitchedPreview(){
  if(!frames.length)throw Error('There are no frames to play.');
- const stitchCanvas=document.createElement('canvas');
- stitchCanvas.width=canvas.width;stitchCanvas.height=canvas.height;
- const sx=stitchCanvas.getContext('2d',{alpha:false});
- // Let the browser capture the canvas at a steady frame rate. A zero-FPS
- // captureStream depends on requestFrame(), which is missing in some browsers.
- const fps=Math.max(1,Math.min(60,Math.round(1/Math.max(.001,frameDuration))));
- const stream=stitchCanvas.captureStream(fps);
- let audioStream=null;
- try{
-  if(sourceVideo&&typeof sourceVideo.captureStream==='function'){
-   audioStream=sourceVideo.captureStream();
-   for(const track of audioStream.getAudioTracks())stream.addTrack(track);
-  }
- }catch(err){console.warn('Could not capture source audio for preview',err)}
- const mime=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(type=>MediaRecorder.isTypeSupported(type));
- if(!mime)throw Error('This browser does not support WebM video recording.');
- const recorder=new MediaRecorder(stream,{mimeType:mime});
- const chunks=[];
- recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
- const stopped=new Promise((resolve,reject)=>{
-  recorder.addEventListener('stop',resolve,{once:true});
-  recorder.addEventListener('error',e=>reject(e.error||Error('Video recording failed')),{once:true});
+ $('status').textContent='Preparing edited frames for playback…';
+ const {FFmpeg}=await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js');
+ const {toBlobURL}=await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js');
+ const ff=new FFmpeg();
+ ff.on('log',({message})=>{if(message)$('status').textContent='Building playback: '+message.slice(-90)});
+ await ff.load({
+  coreURL:await toBlobURL('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.js','text/javascript'),
+  wasmURL:await toBlobURL('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.wasm','application/wasm')
  });
- recorder.start(250);
- let sourceAudioStarted=false;
- if(sourceVideo){
-  try{
-   sourceVideo.pause();sourceVideo.currentTime=0;sourceVideo.muted=false;sourceVideo.volume=1;
-   await sourceVideo.play();sourceAudioStarted=true;
-  }catch(err){
-   console.warn('Source audio playback was blocked while preparing preview; continuing without captured audio.',err);
-  }
+ const fps=Math.max(1,Math.min(60,Math.round(1/Math.max(.001,frameDuration))));
+ for(let i=0;i<frames.length;i++){
+  const blob=await exportFrame(frames[i]);
+  if(!blob)throw Error('Could not render frame '+(i+1));
+  await ff.writeFile('preview'+String(i).padStart(5,'0')+'.png',new Uint8Array(await blob.arrayBuffer()));
+  if(i%10===0)$('status').textContent='Preparing playback frame '+(i+1)+' / '+frames.length;
  }
- try{
-  for(let i=0;i<frames.length;i++){
-   const frame=frames[i];
-   const [base,draw]=await Promise.all([bitmapFromKey(frame.baseKey),bitmapFromKey(frame.drawKey)]);
-   sx.fillStyle='#fff';sx.fillRect(0,0,stitchCanvas.width,stitchCanvas.height);
-   if(base){sx.drawImage(base,0,0,stitchCanvas.width,stitchCanvas.height);base.close?.()}
-   if(draw){sx.drawImage(draw,0,0,stitchCanvas.width,stitchCanvas.height);draw.close?.()}
-   if(i<frames.length-1){
-    const delta=frames[i+1].time-frame.time;
-    const duration=delta>0?delta:frameDuration;
-    await new Promise(resolve=>setTimeout(resolve,Math.max(1,duration*1000)));
-   }
-  }
-  // Keep the final frame visible for one frame interval before ending the file.
-  await new Promise(resolve=>setTimeout(resolve,Math.max(40,frameDuration*1000)));
-  if(recorder.state!=='inactive')recorder.stop();
-  await stopped;
- }catch(err){
-  if(recorder.state!=='inactive')recorder.stop();
-  try{await stopped}catch{}
-  throw err;
- }finally{
-  if(sourceVideo&&sourceAudioStarted)sourceVideo.pause();
-  for(const track of stream.getTracks())track.stop();
-  if(audioStream)for(const track of audioStream.getTracks())track.stop();
+ const args=['-framerate',String(fps),'-i','preview%05d.png'];
+ let audioInput=false;
+ if(audioFile){
+  const ext=(audioFile.name.split('.').pop()||'mp3').toLowerCase();
+  await ff.writeFile('preview-audio.'+ext,new Uint8Array(await audioFile.arrayBuffer()));
+  args.push('-i','preview-audio.'+ext);audioInput=true;
+ }else if(videoFile){
+  const ext=(videoFile.name.split('.').pop()||'mp4').toLowerCase();
+  await ff.writeFile('preview-source.'+ext,new Uint8Array(await videoFile.arrayBuffer()));
+  args.push('-i','preview-source.'+ext);audioInput=true;
  }
- const blob=new Blob(chunks,{type:mime});
- if(!blob.size)throw Error('The browser created an empty preview. Try Chrome or Edge.');
+ args.push('-map','0:v:0');
+ if(audioInput)args.push('-map','1:a:0?');
+ args.push('-c:v','libx264','-preset','ultrafast','-pix_fmt','yuv420p','-movflags','+faststart');
+ if(audioInput)args.push('-c:a','aac','-b:a','128k','-shortest');
+ args.push('edited-preview.mp4');
+ $('status').textContent='Encoding stitched playback video…';
+ const exitCode=await ff.exec(args);
+ if(exitCode!==0)throw Error('The video encoder returned code '+exitCode);
+ const output=await ff.readFile('edited-preview.mp4');
+ if(!output||!output.length)throw Error('The video encoder produced an empty MP4.');
+ const blob=new Blob([output],{type:'video/mp4'});
  if(stitchedPreviewUrl)URL.revokeObjectURL(stitchedPreviewUrl);
  stitchedPreviewUrl=URL.createObjectURL(blob);
- video.pause();video.src=stitchedPreviewUrl;video.controls=true;video.muted=false;video.playbackRate=Number($('preview-speed').value)||1;video.load();
+ video.pause();video.src=stitchedPreviewUrl;video.controls=true;video.muted=false;
+ video.playbackRate=Number($('preview-speed').value)||1;video.load();
  await new Promise((resolve,reject)=>{
   if(video.readyState>=1){resolve();return}
   video.addEventListener('loadedmetadata',resolve,{once:true});
-  video.addEventListener('error',()=>reject(Error('The stitched video could not be opened by this browser.')),{once:true});
+  video.addEventListener('error',()=>reject(Error('Chrome could not open the encoded preview video.')),{once:true});
  });
 }
 $('open').onclick=$('empty-import').onclick=()=>$('file').click();
