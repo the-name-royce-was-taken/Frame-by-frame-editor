@@ -21,3 +21,7 @@
 #stage #empty-state{pointer-events:none!important}
 #stage canvas{position:relative;z-index:1}
 #stage .canvas-text-editor{z-index:3;cursor:text;pointer-events:auto}
+
+/* Cursor tool: selected text gets a clear resize grip. */
+.tool[data-tool=cursor]{grid-column:span 2}
+#stage canvas{cursor:default}
