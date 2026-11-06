@@ -37,7 +37,6 @@
       <span class="eyebrow">CLIPBOARD</span>
       <div class="button-row"><button class="button button-secondary" id="copy">Copy</button><button class="button button-secondary" id="paste">Paste</button></div>
       <p class="hint">Select a region, copy it, switch frames, then paste and drag to position.</p>
-      <div class="control-group"><label for="fps">Playback frame rate</label><select id="fps"><option>12</option><option>24</option><option selected>25</option><option>30</option><option>60</option></select></div>
     </aside>
     <section class="editor">
       <div class="workspace-toolbar"><div><span class="eyebrow">CANVAS</span><strong id="canvas-label">1280 × 720</strong></div><span class="zoom-label">Fit to workspace</span></div>
@@ -51,15 +50,16 @@
     </section>
     <aside class="panel media-panel">
       <div class="panel-heading"><div><span class="eyebrow">PROJECT</span><h2>Media & export</h2></div></div>
-      <div class="media-preview"><video id="vid" controls hidden></video><audio id="aud" controls hidden></audio><div id="media-placeholder"><div class="media-icon">▧</div><strong>No media loaded</strong><span>MP4, MOV or MP3</span></div></div>
+      <div class="media-preview"><video id="vid" controls playsinline hidden></video><audio id="aud" controls hidden></audio><div id="media-placeholder"><div class="media-icon">▧</div><strong>No media loaded</strong><span>MP4, MOV or MP3</span></div></div>
       <p class="hint" id="info">Import a video to extract frames. MP3 can be used as an audio soundtrack.</p>
       <div class="divider"></div>
       <div class="control-group"><label for="format">Export format</label><select id="format"><option value="mp4">MP4 · H.264 / AVC</option><option value="mov">MOV · H.264</option><option value="hevc">MP4 · H.265 / HEVC</option><option value="movhevc">MOV · HEVC</option><option value="mpeg4">MOV · MPEG-4</option><option value="webm">WebM · Browser native</option></select></div>
       <div class="export-note"><strong>Export notes</strong><p>MP4/MOV uses FFmpeg WebAssembly. The encoder is loaded on demand and may take a moment. HEVC depends on browser and codec build support.</p></div>
       <div class="status-line"><span class="status-dot"></span><span id="status">Ready to create</span></div>
-      <div class="memory-card"><span class="eyebrow">PERFORMANCE</span><strong>Memory-aware mode</strong><p>Frames are kept as compact image data and thumbnails are rendered on demand. Import is capped to avoid excessive memory use.</p></div>
+      <div class="memory-card"><span class="eyebrow">PERFORMANCE</span><strong>Memory-aware mode</strong><p>Frames are compressed and stored in the browser’s FrameForgeProject/frames folder, then decoded only when needed.</p></div>
     </aside>
   </main>
-  <script src="frame-store.js"></script>\n  <script type="module" src="app.js"></script>
+  <script src="frame-store.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
