@@ -269,7 +269,7 @@ async function buildStitchedPreview(){
  ff.on('log',({message})=>{if(message)$('status').textContent='Building playback: '+message.slice(-90)});
  const fps=String((1/Math.max(.001,frameDuration)).toFixed(6).replace(/0+$/,'').replace(/\.$/,''));
  for(let i=0;i<frames.length;i++){
-  const blob=await exportFrame(frames[i]);
+  const blob=await exportFrame(frames[i],false);
   if(!blob)throw Error('Could not render frame '+(i+1));
   await ff.writeFile('preview'+String(i).padStart(5,'0')+'.png',new Uint8Array(await blob.arrayBuffer()));
   if(i%10===0)$('status').textContent='Preparing playback frame '+(i+1)+' / '+frames.length;
@@ -382,9 +382,12 @@ async function getAIUpscaler(){
  if(!aiUpscalerPromise)aiUpscalerPromise=(async()=>{
   $('status').textContent='Loading AI upscaler engine…';
   await loadExternalScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js');
+  await loadExternalScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/tf-backend-wasm.min.js');
+  if(window.tf?.wasm?.setWasmPaths)window.tf.wasm.setWasmPaths('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/');
+  await window.tf.setBackend('wasm');
+  if(window.tf?.ready)await window.tf.ready();
   await loadExternalScript('https://cdn.jsdelivr.net/npm/@upscalerjs/esrgan-thick@latest/dist/umd/4x.min.js');
   await loadExternalScript('https://cdn.jsdelivr.net/npm/upscaler@latest/dist/browser/umd/upscaler.min.js');
-  if(window.tf?.ready)await window.tf.ready();
   if(!window.Upscaler||!window.ESRGANThick4x)throw Error('The AI super-resolution model did not initialize.');
   aiUpscalerInstance=new window.Upscaler({model:window.ESRGANThick4x});
   return aiUpscalerInstance;
@@ -394,14 +397,17 @@ async function getAIUpscaler(){
 async function aiUpscaleCanvas(source){
  const upscaler=await getAIUpscaler();
  $('status').textContent='AI-enhancing image details…';
- const result=await upscaler.upscale(source,{patchSize:64,padding:5});
+ const reduced=document.createElement('canvas');reduced.width=Math.max(1,Math.round(source.width/2));reduced.height=Math.max(1,Math.round(source.height/2));
+ const reducedCtx=reduced.getContext('2d',{alpha:false});reducedCtx.imageSmoothingEnabled=true;reducedCtx.imageSmoothingQuality='high';reducedCtx.drawImage(source,0,0,reduced.width,reduced.height);
+ const result=await upscaler.upscale(reduced,{patchSize:32,padding:4});
  const image=new Image();image.src=result;await image.decode();
  const output=document.createElement('canvas');output.width=image.naturalWidth;output.height=image.naturalHeight;
  const outCtx=output.getContext('2d',{alpha:false});outCtx.imageSmoothingEnabled=true;outCtx.imageSmoothingQuality='high';outCtx.drawImage(image,0,0);
- if(output.width!==source.width*4||output.height!==source.height*4)throw Error('AI model returned an unexpected image size.');
+ if(output.width!==reduced.width*4||output.height!==reduced.height*4)throw Error('AI model returned an unexpected image size.');
+ reduced.width=1;reduced.height=1;
  return output;
 }
-async function exportFrame(frame){const out=document.createElement('canvas');out.width=canvas.width;out.height=canvas.height;const x=out.getContext('2d',{alpha:false});x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.fillStyle='#fff';x.fillRect(0,0,out.width,out.height);const base=await bitmapFromKey(frame.baseKey);if(base){x.drawImage(base,0,0,out.width,out.height);base.close?.()}const draw=await bitmapFromKey(frame.drawKey);if(draw){x.drawImage(draw,0,0,out.width,out.height);draw.close?.()}if(frame.imagesKey){const ib=await FrameStore.get(frame.imagesKey);if(ib){try{const items=JSON.parse(await ib.text());for(const item of items){const blob=await FrameStore.get(item.key);if(blob){const bm=await createImageBitmap(blob);x.save();x.translate(item.x+item.w/2,item.y+item.h/2);x.rotate(item.rotation||0);x.drawImage(bm,-item.w/2,-item.h/2,item.w,item.h);x.restore();bm.close?.()}}}catch{}}}if(frame.textKey){const tb=await FrameStore.get(frame.textKey);if(tb){try{x.save();drawTextItems(x,JSON.parse(await tb.text()));x.restore()}catch{}}}const finalCanvas=$('upscale-4x')?.checked?await aiUpscaleCanvas(out):out;return new Promise(resolve=>finalCanvas.toBlob(resolve,'image/png'))}
+async function exportFrame(frame,applyAiUpscale=true){const out=document.createElement('canvas');out.width=canvas.width;out.height=canvas.height;const x=out.getContext('2d',{alpha:false});x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.fillStyle='#fff';x.fillRect(0,0,out.width,out.height);const base=await bitmapFromKey(frame.baseKey);if(base){x.drawImage(base,0,0,out.width,out.height);base.close?.()}const draw=await bitmapFromKey(frame.drawKey);if(draw){x.drawImage(draw,0,0,out.width,out.height);draw.close?.()}if(frame.imagesKey){const ib=await FrameStore.get(frame.imagesKey);if(ib){try{const items=JSON.parse(await ib.text());for(const item of items){const blob=await FrameStore.get(item.key);if(blob){const bm=await createImageBitmap(blob);x.save();x.translate(item.x+item.w/2,item.y+item.h/2);x.rotate(item.rotation||0);x.drawImage(bm,-item.w/2,-item.h/2,item.w,item.h);x.restore();bm.close?.()}}}catch{}}}if(frame.textKey){const tb=await FrameStore.get(frame.textKey);if(tb){try{x.save();drawTextItems(x,JSON.parse(await tb.text()));x.restore()}catch{}}}const finalCanvas=applyAiUpscale&&$('upscale-4x')?.checked?await aiUpscaleCanvas(out):out;return new Promise(resolve=>finalCanvas.toBlob(resolve,'image/png'))}
 function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000)}
 $('export').onclick=async()=>{if(!frames.length)return alert('Add or import frames before exporting.');const fmt=$('format').value;try{
 $('status').textContent='Loading FFmpeg…';const ff=await createFFmpegInstance();for(let i=0;i<frames.length;i++){const blob=await exportFrame(frames[i]);await ff.writeFile('frame'+String(i).padStart(5,'0')+'.png',new Uint8Array(await blob.arrayBuffer()));if(i%8===0)$('status').textContent='Export prep '+(i+1)+' / '+frames.length}
