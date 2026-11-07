@@ -88,12 +88,12 @@ function updateAudioTrack(){
   const clip=document.createElement('div');clip.className='audio-track-clip';clip.dataset.trackId=track.id;clip.title='Drag to snap audio to a frame start';clip.style.top=(4+rowIndex*38)+'px';
   const clipFrames=Math.max(1,Math.ceil((track.duration||frames.length*frameDuration)/Math.max(.001,frameDuration)));
   clip.style.width=Math.max(42,clipFrames*framePx-7)+'px';clip.style.left=(track.offsetFrame*framePx)+'px';
-  const del=document.createElement('button');del.type='button';del.className='audio-track-delete';del.title='Delete audio track';del.setAttribute('aria-label','Delete '+track.name);del.textContent='▣';
+  const del=document.createElement('button');del.type='button';del.className='audio-track-delete';del.title='Delete audio track';del.setAttribute('aria-label','Delete '+track.name);del.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 3v7m4-7v7"/></svg>';
   del.addEventListener('pointerdown',e=>e.stopPropagation());del.addEventListener('click',e=>{e.stopPropagation();removeAudioTrack(track.id)});
   const label=document.createElement('span');label.className='audio-track-clip-label';label.textContent=track.name+' · '+(track.offsetFrame+1);
   clip.append(del,label);
   clip.addEventListener('pointerdown',e=>{if(e.target===del)return;e.preventDefault();clip.setPointerCapture(e.pointerId);audioDrag={x:e.clientX,trackId:track.id,offset:track.offsetFrame}});
-  clip.addEventListener('pointermove',e=>{if(!audioDrag||audioDrag.trackId!==track.id)return;track.offsetFrame=Math.max(0,audioDrag.offset+Math.round((e.clientX-audioDrag.x)/framePx));updateAudioTrack()});
+  clip.addEventListener('pointermove',e=>{if(!audioDrag||audioDrag.trackId!==track.id)return;track.offsetFrame=Math.max(0,audioDrag.offset+Math.round((e.clientX-audioDrag.x)/framePx));clip.style.left=(track.offsetFrame*framePx)+'px';label.textContent=track.name+' · '+(track.offsetFrame+1)});
   clip.addEventListener('pointerup',()=>{if(audioDrag?.trackId===track.id)audioDrag=null;updateAudioTrack()});
   clip.addEventListener('pointercancel',()=>{if(audioDrag?.trackId===track.id)audioDrag=null;updateAudioTrack()});
   lane.append(clip);
