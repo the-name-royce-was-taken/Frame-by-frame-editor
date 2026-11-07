@@ -253,12 +253,12 @@ async function createFFmpegInstance(){
  });
  return ff;
 }
-async async function buildStitchedPreview(){
+async function buildStitchedPreview(){
  if(!frames.length)throw Error('There are no frames to play.');
  $('status').textContent='Preparing edited frames for playback…';
  const ff=await createFFmpegInstance();
  ff.on('log',({message})=>{if(message)$('status').textContent='Building playback: '+message.slice(-90)});
- const fps=Math.max(1,Math.min(60,Math.round(1/Math.max(.001,frameDuration))));
+ const fps=String((1/Math.max(.001,frameDuration)).toFixed(6).replace(/0+$/,'').replace(/\.$/,''));
  for(let i=0;i<frames.length;i++){
   const blob=await exportFrame(frames[i]);
   if(!blob)throw Error('Could not render frame '+(i+1));
@@ -309,7 +309,29 @@ $('audio-upload').onclick=()=>$('audio-file').click();
 $('audio-file').onchange=async e=>{const f=e.target.files?.[0];if(f)await loadAudioTrack(f);e.target.value=''};
 $('open').onclick=$('empty-import').onclick=()=>$('file').click();
 $('file').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;if(f.type.startsWith('audio')){await loadAudioTrack(f);return}
-videoFile=f;audioFile=null;audioTrackSource='video';audioOffsetFrame=0;audioTracks=audioTracks.filter(t=>t.source!=='video');sourceVideo=document.createElement('video');sourceVideo.src=URL.createObjectURL(f);sourceVideo.preload='auto';sourceVideo.playsInline=true;sourceVideo.muted=true;$('info').textContent='Reading every decoded frame…';$('status').textContent='Extracting original frames…';await new Promise((resolve,reject)=>{sourceVideo.onloadedmetadata=resolve;sourceVideo.onerror=reject});audioDuration=Number.isFinite(sourceVideo.duration)?sourceVideo.duration:0;addAudioTrack(f,'video',audioDuration);resize(sourceVideo.videoWidth,sourceVideo.videoHeight);frames=[];const temp=document.createElement('canvas');temp.width=canvas.width;temp.height=canvas.height;const tc=temp.getContext('2d',{alpha:false});let chain=Promise.resolve(),captured=0,lastTime=-1;frameDuration=1/30;await new Promise((resolve,reject)=>{let ended=false;const finish=()=>{if(ended)return;ended=true;sourceVideo.pause();resolve()};sourceVideo.onended=finish;sourceVideo.onerror=()=>reject(Error('Video decoding failed'));const capture=(now,meta)=>{if(ended)return;const stamp=meta.mediaTime;if(stamp>lastTime+0.000001){lastTime=stamp;const frameCanvas=document.createElement('canvas');frameCanvas.width=temp.width;frameCanvas.height=temp.height;frameCanvas.getContext('2d',{alpha:false}).drawImage(sourceVideo,0,0,frameCanvas.width,frameCanvas.height);const blobPromise=new Promise(resolve=>frameCanvas.toBlob(resolve,'image/webp',.72));chain=chain.then(async()=>{try{const blob=await blobPromise;if(blob){const frame=blankFrame(stamp);frame.baseKey=key('base');await FrameStore.put(frame.baseKey,blob);frames.push(frame);captured++;if(captured%30===0){$('status').textContent='Saved '+captured+' original frames…';await new Promise(r=>setTimeout(r,0))}}}finally{frameCanvas.width=0;frameCanvas.height=0}})}}if(sourceVideo.requestVideoFrameCallback)sourceVideo.requestVideoFrameCallback(capture);else finish()};if(sourceVideo.requestVideoFrameCallback)sourceVideo.requestVideoFrameCallback(capture);sourceVideo.play().catch(reject);setTimeout(finish,Math.ceil(sourceVideo.duration*1000)+5000)});await chain;sourceVideo.muted=false;frameDuration=frames.length>0?sourceVideo.duration/frames.length:1/30;await loadFrame(0);sourceVideo.currentTime=0;$('info').textContent=f.name+' · '+canvas.width+'×'+canvas.height+' · '+captured+' decoded frames · audio shown on separate timeline track';updateAudioTrack();$('status').textContent='Stitching smooth preview…';$('status').textContent='Frames imported · use Preview edited video to build playback';};
+videoFile=f;audioFile=null;audioTrackSource='video';audioOffsetFrame=0;audioTracks=audioTracks.filter(t=>t.source!=='video');sourceVideo=document.createElement('video');sourceVideo.src=URL.createObjectURL(f);sourceVideo.preload='auto';sourceVideo.playsInline=true;sourceVideo.muted=true;$('info').textContent='Reading every decoded frame…';$('status').textContent='Extracting original frames…';await new Promise((resolve,reject)=>{sourceVideo.onloadedmetadata=resolve;sourceVideo.onerror=reject});audioDuration=Number.isFinite(sourceVideo.duration)?sourceVideo.duration:0;addAudioTrack(f,'video',audioDuration);resize(sourceVideo.videoWidth,sourceVideo.videoHeight);frames=[];const temp=document.createElement('canvas');temp.width=canvas.width;temp.height=canvas.height;const tc=temp.getContext('2d',{alpha:false});let chain=Promise.resolve(),captured=0,lastTime=-1;frameDuration=1/30;await new Promise((resolve,reject)=>{let ended=false;const finish=()=>{if(ended)return;ended=true;sourceVideo.pause();resolve()};sourceVideo.onended=finish;sourceVideo.onerror=()=>reject(Error('Video decoding failed'));const capture=(now,meta)=>{
+ if(ended)return;
+ const stamp=meta.mediaTime;
+ if(stamp>lastTime+0.000001){
+  lastTime=stamp;
+  const frameCanvas=document.createElement('canvas');
+  frameCanvas.width=temp.width;frameCanvas.height=temp.height;
+  frameCanvas.getContext('2d',{alpha:false}).drawImage(sourceVideo,0,0,frameCanvas.width,frameCanvas.height);
+  const blobPromise=new Promise(resolve=>frameCanvas.toBlob(resolve,'image/webp',.72));
+  chain=chain.then(async()=>{
+   try{
+    const blob=await blobPromise;
+    if(blob){
+     const frame=blankFrame(stamp);frame.baseKey=key('base');
+     await FrameStore.put(frame.baseKey,blob);frames.push(frame);captured++;
+     if(captured%30===0){$('status').textContent='Saved '+captured+' original frames…';await new Promise(r=>setTimeout(r,0))}
+    }
+   }finally{frameCanvas.width=0;frameCanvas.height=0}
+  });
+ }
+ if(sourceVideo.requestVideoFrameCallback)sourceVideo.requestVideoFrameCallback(capture);else finish();
+};
+if(sourceVideo.requestVideoFrameCallback)sourceVideo.requestVideoFrameCallback(capture);sourceVideo.play().catch(reject);setTimeout(finish,Math.ceil(sourceVideo.duration*1000)+5000)});await chain;sourceVideo.muted=false;frameDuration=frames.length>0?sourceVideo.duration/frames.length:1/30;await loadFrame(0);sourceVideo.currentTime=0;$('info').textContent=f.name+' · '+canvas.width+'×'+canvas.height+' · '+captured+' decoded frames · audio shown on separate timeline track';updateAudioTrack();$('status').textContent='Stitching smooth preview…';$('status').textContent='Frames imported · use Preview edited video to build playback';};
 $('prev').onclick=()=>loadFrame(index-1);$('next').onclick=()=>loadFrame(index+1);$('scrub').oninput=e=>loadFrame(+e.target.value);
 $('add').onclick=async()=>{await saveActive();frames.splice(index+1,0,blankFrame());await loadFrame(index+1)};
 $('undo').onclick=async()=>{const action=undoStack.pop();if(!action)return;if(action.type==='delete-frame'){frames.splice(action.index,0,action.frame);if(action.wasCurrent)index=action.index;else if(action.index<=action.selectedIndex)index=action.selectedIndex+1;await loadFrame(index);return}const data=action.type==='draw'?action.data:action;const im=new Image();im.onload=async()=>{activeDraw.width=canvas.width;activeDraw.height=canvas.height;dctx().drawImage(im,0,0);activeDrawDirty=true;await saveActive();render()};im.src=data};
