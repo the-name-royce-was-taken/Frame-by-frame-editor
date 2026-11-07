@@ -7,31 +7,8 @@ function blankFrame(time=0){return {baseKey:null,drawKey:null,textKey:null,image
 function imageMetadata(){return imageItems.map(({key,x,y,w,h,rotation=0})=>({key,x,y,w,h,rotation}))}
 function syncFrameImages(){if(frames[index])frames[index].images=imageMetadata()}
 function drawOneImage(target,o){if(!o.bitmap)return;target.save();target.translate(o.x+o.w/2,o.y+o.h/2);target.rotate(o.rotation||0);target.drawImage(o.bitmap,-o.w/2,-o.h/2,o.w,o.h);target.restore()}
-async function decodeImageFile(file){
- const url=URL.createObjectURL(file);
- try{
-  if(typeof createImageBitmap==='function'){
-   try{return await createImageBitmap(file,{imageOrientation:'from-image'})}catch{}
-  }
-  const img=new Image();img.decoding='async';img.src=url;
-  await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(Error('The browser image decoder rejected this file.'))});
-  if(!img.naturalWidth||!img.naturalHeight)throw Error('The selected image has no readable dimensions.');
-  return img;
- }finally{URL.revokeObjectURL(url)}
-}
-async function resampleImageForCanvas(source){
- const scale=Math.min(1,canvas.width/source.width,canvas.height/source.height);
- const width=Math.max(1,Math.round(source.width*scale)),height=Math.max(1,Math.round(source.height*scale));
- const buffer=document.createElement('canvas');buffer.width=width;buffer.height=height;
- const bctx=buffer.getContext('2d',{alpha:true});
- if(!bctx)throw Error('Could not create an image-processing canvas.');
- bctx.imageSmoothingEnabled=true;bctx.imageSmoothingQuality='high';
- bctx.drawImage(source,0,0,width,height);
- const blob=await new Promise((resolve,reject)=>buffer.toBlob(value=>value?resolve(value):reject(Error('Image rescaling failed.')),'image/png'));
- const bitmap=typeof createImageBitmap==='function'?await createImageBitmap(blob):await decodeImageFile(blob);
- return {bitmap,blob,width,height};
-}
-function drawImageItems(target,handles=false){imageItems.forEach((o,i)=>{if(!o.bitmap)return;drawOneImage(target,o);if(handles&&i===imageSelectionIndex){target.save();target.translate(o.x+o.w/2,o.y+o.h/2);target.rotate(o.rotation||0);target.strokeStyle='#ad5b3d';target.lineWidth=2;target.setLineDash([5,3]);target.strokeRect(-o.w/2,-o.h/2,o.w,o.h);target.setLineDash([]);target.fillStyle='#ad5b3d';target.fillRect(o.w/2-7,o.h/2-7,14,14);target.beginPath();target.arc(0,-o.h/2-22,12,0,Math.PI*1.72);target.stroke();target.beginPath();target.moveTo(10,-o.h/2-29);target.lineTo(12,-o.h/2-20);target.lineTo(3,-o.h/2-21);target.closePath();target.fill();target.restore()}})}
+async function decodeUploadedImage(file){try{return await createImageBitmap(file)}catch(bitmapError){const url=URL.createObjectURL(file);try{const img=new Image();img.decoding='async';img.src=url;await img.decode();return img}catch(imageError){throw Error('This browser could not decode this image ('+(bitmapError.message||'unsupported format')+'). Try PNG, JPG, or WebP.')}finally{URL.revokeObjectURL(url)}}}
+function drawImageItems(target,handles=false){imageItems.forEach((o,i)=>{if(!o.bitmap)return;drawOneImage(target,o);if(handles&&i===imageSelectionIndex){target.save();target.translate(o.x+o.w/2,o.y+o.h/2);target.rotate(o.rotation||0);target.strokeStyle='#ad5b3d';target.lineWidth=2;target.setLineDash([5,3]);target.strokeRect(-o.w/2,-o.h/2,o.w,o.h);target.setLineDash([]);target.fillStyle='#ad5b3d';target.fillRect(o.w/2-7,o.h/2-7,14,14);target.beginPath();target.moveTo(0,-o.h/2);target.lineTo(0,-o.h/2-22);target.stroke();target.beginPath();target.arc(0,-o.h/2-22,6,0,Math.PI*2);target.fill();target.restore()}})}
 function imageHit(o,p){const dx=p.x-(o.x+o.w/2),dy=p.y-(o.y+o.h/2),r=-(o.rotation||0),x=dx*Math.cos(r)-dy*Math.sin(r),y=dx*Math.sin(r)+dy*Math.cos(r);return (Math.abs(x)<=o.w/2&&Math.abs(y)<=o.h/2)||Math.hypot(x,y+o.h/2+22)<14}
 function imageHandle(o,p){const dx=p.x-(o.x+o.w/2),dy=p.y-(o.y+o.h/2),r=-(o.rotation||0),x=dx*Math.cos(r)-dy*Math.sin(r),y=dx*Math.sin(r)+dy*Math.cos(r);if(Math.hypot(x,y+o.h/2+22)<12)return 'rotate';if(x>o.w/2-16&&y>o.h/2-16)return 'resize';return 'move'}
 let imageClipboard=null;
@@ -149,35 +126,7 @@ function updateToolCursor(){const cursor=tool==='cursor'?'default':tool==='erase
 document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x===b));updateToolCursor();render();}));
 updateToolCursor();
 initTextFontControl();
-const imageFileInput=$('image-file');
-$('image-upload-trigger').addEventListener('click',()=>imageFileInput.click());
-imageFileInput.addEventListener('change',async e=>{
- const file=e.target.files?.[0];e.target.value='';if(!file)return;
- let source=null,bitmap=null;
- try{
-  $('status').textContent='Decoding image…';
-  if(!file.type.startsWith('image/')&&!/\\.(png|jpe?g|gif|webp|bmp|svg|avif|tiff?)$/i.test(file.name))throw Error('Please choose an image file.');
-  source=await decodeImageFile(file);
-  if(!source.width||!source.height)throw Error('The selected image has no readable dimensions.');
-  $('status').textContent='Rescaling image…';
-  const processed=await resampleImageForCanvas(source);bitmap=processed.bitmap;
-  const imageKey=key('image');
-  let storageWarning='';
-  try{await FrameStore.put(imageKey,processed.blob)}catch(storageError){storageWarning=' (storage failed: '+storageError.message+')';console.error('Image storage failed:',storageError)}
-  ++loadToken;
-  if(!frames.length){frames=[blankFrame()];index=0}
-  const item={key:imageKey,x:(canvas.width-processed.width)/2,y:(canvas.height-processed.height)/2,w:processed.width,h:processed.height,rotation:0,bitmap};
-  imageItems.push(item);imageSelectionIndex=imageItems.length-1;textSelectionIndex=-1;
-  tool='cursor';document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool==='cursor'));
-  updateToolCursor();syncFrameImages();await render();timeline();
-  $('status').textContent='Image loaded · '+file.name+' · '+source.width+' × '+source.height+' px'+storageWarning;
-  bitmap=null;
- }catch(err){
-  bitmap?.close?.();console.error('Image upload failed:',err);
-  $('status').textContent='Image load failed: '+(err?.message||String(err));
-  alert('Image load failed: '+(err?.message||String(err)));
- }finally{source?.close?.()}
-});
+$('image-file').onchange=async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;let bitmap;try{if(!frames.length){frames=[blankFrame()];index=0}if(!file.type.startsWith('image/')&&!/\.(png|jpe?g|gif|webp|bmp|svg|avif|tiff?)$/i.test(file.name))throw Error('Please choose an image file.');bitmap=await decodeUploadedImage(file);if(!bitmap.width||!bitmap.height)throw Error('This image has no usable dimensions.');const imageKey=key('image');await FrameStore.put(imageKey,file);++loadToken;const scale=Math.min(1,canvas.width/bitmap.width,canvas.height/bitmap.height),w=bitmap.width*scale,h=bitmap.height*scale;const item={key:imageKey,x:(canvas.width-w)/2,y:(canvas.height-h)/2,w,h,rotation:0,bitmap};imageItems.push(item);syncFrameImages();imageSelectionIndex=imageItems.length-1;textSelectionIndex=-1;tool='cursor';document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool==='cursor'));updateToolCursor();await render();timeline();$('status').textContent='Image added to canvas · '+file.name+' · '+bitmap.width+' × '+bitmap.height+' px';}catch(err){bitmap?.close?.();console.error('Image upload failed:',err);$('status').textContent='Could not load image: '+err.message;alert('Could not load this image: '+err.message)}};
 $('size').oninput=e=>$('size-value').textContent=e.target.value+' px';
 canvas.onpointerdown=e=>{
  if(!frames.length)return;
@@ -215,7 +164,7 @@ canvas.addEventListener('click',e=>{
 canvas.onpointermove=e=>{
  if(!drawing)return;
  const p=point(e);
- if(tool==='cursor'&&imageDrag){const o=imageItems[imageDrag.index],dx=p.x-imageDrag.x,dy=p.y-imageDrag.y;if(imageDrag.mode==='resize'){const scale=Math.max(.03,(imageDrag.ow+dx)/imageDrag.ow,(imageDrag.oh+dy)/imageDrag.oh);o.w=imageDrag.ow*scale;o.h=imageDrag.oh*scale}else if(imageDrag.mode==='rotate'){o.rotation=imageDrag.rotation+Math.atan2(p.y-(imageDrag.oy+imageDrag.oh/2),p.x-(imageDrag.ox+imageDrag.ow/2))-imageDrag.startAngle}else{o.x=imageDrag.ox+dx;o.y=imageDrag.oy+dy}render();return}
+ if(tool==='cursor'&&imageDrag){const o=imageItems[imageDrag.index],dx=p.x-imageDrag.x,dy=p.y-imageDrag.y;if(imageDrag.mode==='resize'){const scale=Math.max(.03,(imageDrag.ow+dx)/imageDrag.ow,(imageDrag.oh+dy)/imageDrag.oh);o.w=imageDrag.ow*scale;o.h=imageDrag.oh*scale}else if(imageDrag.mode==='rotate'){{const angle=imageDrag.rotation+Math.atan2(p.y-(imageDrag.oy+imageDrag.oh/2),p.x-(imageDrag.ox+imageDrag.ow/2))-imageDrag.startAngle;o.rotation=e.shiftKey?Math.round(angle/(Math.PI/4))*(Math.PI/4):angle}}else{o.x=imageDrag.ox+dx;o.y=imageDrag.oy+dy}render();return}
  if((tool==='text'||tool==='cursor')&&textDrag){const o=textItems[textDrag.index],dx=p.x-textDrag.x,dy=p.y-textDrag.y;if(textDrag.mode==='resize'){o.size=Math.max(8,Math.min(300,textDrag.os+dx*.35));fitTextBounds(o)}else{o.x=textDrag.ox+dx;o.y=textDrag.oy+dy}render();return}
  if(tool==='select'){selection=rect(start,p);render();return}
  if(paste){paste.x=p.x-(paste.dragOffset?.x||0);paste.y=p.y-(paste.dragOffset?.y||0);render();return}
@@ -328,7 +277,7 @@ function download(blob,name){const url=URL.createObjectURL(blob),a=document.crea
 $('export').onclick=async()=>{if(!frames.length)return alert('Add or import frames before exporting.');const fmt=$('format').value;try{if(fmt==='webm'){const stream=canvas.captureStream(Math.max(1,Math.round(1/frameDuration))),rec=new MediaRecorder(stream),chunks=[];rec.ondataavailable=e=>chunks.push(e.data);rec.start();for(let i=0;i<frames.length;i++){await loadFrame(i);await new Promise(r=>setTimeout(r,frameDuration*1000))}rec.stop();await new Promise(r=>rec.onstop=r);download(new Blob(chunks,{type:'video/webm'}),'frameforge.webm');return}
 $('status').textContent='Loading FFmpeg…';const ff=await createFFmpegInstance();for(let i=0;i<frames.length;i++){const blob=await exportFrame(frames[i]);await ff.writeFile('frame'+String(i).padStart(5,'0')+'.png',new Uint8Array(await blob.arrayBuffer()));if(i%8===0)$('status').textContent='Export prep '+(i+1)+' / '+frames.length}
 const mov=['mov','movhevc','mpeg4'].includes(fmt),hevc=['hevc','movhevc'].includes(fmt),codec=hevc?'libx265':fmt==='mpeg4'?'mpeg4':'libx264',ext=mov?'mov':'mp4',args=['-framerate',String(Math.max(1,Math.round(1/frameDuration))),'-i','frame%05d.png'];if(audioTrackSource==='file'&&audioFile){const audioExt=(audioFile.name.split('.').pop()||'mp3').toLowerCase();await ff.writeFile('soundtrack.'+audioExt,new Uint8Array(await audioFile.arrayBuffer()));args.push('-itsoffset',String(audioOffsetFrame*frameDuration),'-i','soundtrack.'+audioExt,'-map','0:v:0','-map','1:a:0?','-shortest')}else if(audioTrackSource==='video'&&videoFile){const sourceExt=(videoFile.name.split('.').pop()||'mp4').toLowerCase();await ff.writeFile('source-audio.'+sourceExt,new Uint8Array(await videoFile.arrayBuffer()));args.push('-itsoffset',String(audioOffsetFrame*frameDuration),'-i','source-audio.'+sourceExt,'-map','0:v:0','-map','1:a:0?','-shortest')}else{args.push('-map','0:v:0')};args.push('-c:v',codec,'-pix_fmt','yuv420p');if(codec==='libx264')args.push('-preset','ultrafast');args.push('out.'+ext);$('status').textContent='Encoding export…';const exitCode=await ff.exec(args);if(exitCode!==0)throw Error('FFmpeg encoder exited with code '+exitCode);const output=await ff.readFile('out.'+ext);if(!output||!output.length)throw Error('FFmpeg created an empty export');download(new Blob([output],{type:ext==='mov'?'video/quicktime':'video/mp4'}),'frameforge.'+ext);$('status').textContent='Export finished'}catch(err){$('status').textContent='Export failed: '+err.message+' (try WebM)';console.error(err)}};
-$('image-copy').onclick=()=>copySelectedImage(false);$('image-cut').onclick=()=>copySelectedImage(true);$('image-paste').onclick=pasteSelectedImage
+$('image-copy').onclick=()=>copySelectedImage(false);$('image-cut').onclick=()=>copySelectedImage(true);$('image-paste').onclick=pasteSelectedImage;$('image-rotate').onclick=rotateSelectedImage;
 $('text-copy').onclick=()=>copySelectedText(false);
 $('text-cut').onclick=()=>copySelectedText(true);
 $('text-delete').onclick=deleteSelectedText;
