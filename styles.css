@@ -265,3 +265,10 @@ body.dark-mode .zoom-frame-button.active{background:#49392f;border-color:#c17b5b
 .zoom-frame-button.active span,.frame-size-button.active span{color:#ad5b3d}
 body.dark-mode .zoom-frame-button.active,body.dark-mode .frame-size-button.active{background:#49392f;border-color:#c17b5b;color:#fff;box-shadow:inset 3px 0 #c17b5b}
 body.dark-mode .zoom-frame-button.active span,body.dark-mode .frame-size-button.active span{color:#e0a080}
+
+
+/* Duplicate-frame button: darker beige in light mode, original green-charcoal in dark mode. */
+.thumb-duplicate{border-color:#bdb5a7;background:#d8d1c4;color:#5f5143}
+.thumb-duplicate:hover{background:#c9c0b1;border-color:#a99e8d;color:#493b30}
+body.dark-mode .thumb-duplicate{border-color:#596052;background:#292f29;color:#e0b5a1}
+body.dark-mode .thumb-duplicate:hover{background:#49332e;border-color:#d09270;color:#ffd4bf}
