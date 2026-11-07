@@ -26,15 +26,15 @@
         <button class="tool" data-tool="line"><span>／</span>Line</button>
         <button class="tool" data-tool="rect"><span>▱</span>Rectangle</button>
         <button class="tool" data-tool="ellipse"><span>◯</span>Ellipse</button>
-        <button class="tool" data-tool="cursor"><span>↖</span>Cursor</button><button class="tool" data-tool="select"><span>⌗</span>Select</button><button class="tool" data-tool="text"><span>T</span>Text</button><label class="tool image-upload-tool" for="image-file"><span>▧</span>Upload image</label><input id="image-file" class="image-file-input" type="file" accept="image/*">
+        <button class="tool" data-tool="cursor"><span>↖</span>Cursor</button><button class="tool" data-tool="select"><span>⌗</span>Select</button><button class="tool" data-tool="text"><span>T</span>Text</button>
       </div>
       <div class="control-group"><label for="color">Stroke color</label><div class="color-row"><input id="color" type="color" value="#ff5d78"><span>Custom color</span></div></div>
       <div class="control-group"><div class="label-row"><label for="size">Brush size</label><output id="size-value">5 px</output></div><input id="size" type="range" min="1" max="60" value="5"></div>
       <div class="button-stack"><button class="button button-secondary" id="undo">↶ Undo</button><button class="button button-secondary" id="clear">Clear drawing</button></div>
       <div class="divider"></div>
       <span class="eyebrow">CLIPBOARD</span>
-      <div class="button-row"><button class="button button-secondary" id="copy">Copy area</button><button class="button button-secondary" id="paste">Paste area</button></div><div class="button-row text-actions"><button class="button button-secondary" id="image-copy">Copy image</button><button class="button button-secondary" id="image-cut">Cut image</button></div><div class="button-row text-actions"><button class="button button-secondary" id="image-paste">Paste image</button><button class="button button-secondary" id="image-rotate">Rotate 90°</button></div><div class="button-row text-actions"><button class="button button-secondary" id="text-copy">Copy text</button><button class="button button-secondary" id="text-cut">Cut</button></div><div class="button-row text-actions"><button class="button button-secondary" id="text-paste">Paste text</button><button class="button button-secondary" id="text-delete">Delete text</button></div>
-      <p class="hint">Cursor: select, move, resize, and rotate images or text. Image and text copy/cut/paste keeps the original position. Ctrl/Cmd+C, X, V and Delete work on selected objects. Text: click to add.</p><p class="hint">Large uploads are fitted to the canvas without stretching. Use Cursor to move, resize, or rotate images.</p>
+      <div class="button-row"><button class="button button-secondary" id="copy">Copy area</button><button class="button button-secondary" id="paste">Paste area</button></div><div class="button-row text-actions"><button class="button button-secondary" id="text-copy">Copy text</button><button class="button button-secondary" id="text-cut">Cut</button></div><div class="button-row text-actions"><button class="button button-secondary" id="text-paste">Paste text</button><button class="button button-secondary" id="text-delete">Delete text</button></div>
+      <p class="hint">Cursor: select, move, resize, copy, cut, paste, or delete text. Ctrl/Cmd+C, X, V and Delete also work. Text: click to add.</p><p class="hint">Select a region, copy it, switch frames, then paste and drag to position.</p>
       <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to dark mode" title="Switch to dark mode"><span aria-hidden="true">☼</span></button>
     </aside>
     <section class="editor">
