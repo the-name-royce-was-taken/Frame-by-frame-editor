@@ -371,10 +371,10 @@ function getUpscaleWorker(){
  if(upscaleWorker)return upscaleWorker;
  upscaleWorker=new Worker(new URL('upscale-worker.js',location.href));
  upscaleWorker.onmessage=e=>{
-  const {id,bitmap,error}=e.data||{},pending=upscalePending.get(id);
+  const {id,bitmap,data,shape,error}=e.data||{},pending=upscalePending.get(id);
   if(!pending){bitmap?.close?.();return}
   upscalePending.delete(id);
-  if(error)pending.reject(Error(error));else pending.resolve(bitmap);
+  if(error)pending.reject(Error(error));else if(data&&shape)pending.resolve({data:new Float32Array(data),shape});else pending.reject(Error('AI upscaler returned no image data.'));
  };
  upscaleWorker.onerror=e=>{
   const error=Error(e.message||'AI upscaling worker failed');
@@ -396,9 +396,18 @@ async function aiUpscaleCanvas(source){
   upscalePending.set(id,{resolve,reject});
   worker.postMessage({id,bitmap},[bitmap]);
  });
- const output=document.createElement('canvas');output.width=result.width;output.height=result.height;
- const ctx=output.getContext('2d',{alpha:false});ctx.drawImage(result,0,0);result.close?.();
- return output;
+ const [height,width,channels]=result.shape;
+ if(!height||!width||channels<3)throw Error('AI upscaler returned an invalid image shape.');
+ const output=document.createElement('canvas');output.width=width;output.height=height;
+ const ctx=output.getContext('2d',{alpha:false});
+ const rgba=ctx.createImageData(width,height),pixels=result.data;
+ for(let src=0,dst=0;src<height*width*channels;src+=channels,dst+=4){
+  const scale=pixels instanceof Float32Array||pixels instanceof Float64Array?255:1;
+  rgba.data[dst]=Math.max(0,Math.min(255,Math.round(pixels[src]*scale)));
+  rgba.data[dst+1]=Math.max(0,Math.min(255,Math.round(pixels[src+1]*scale)));
+  rgba.data[dst+2]=Math.max(0,Math.min(255,Math.round(pixels[src+2]*scale)));rgba.data[dst+3]=255;
+ }
+ ctx.putImageData(rgba,0,0);return output;
 }
 async function exportFrame(frame,applyAiUpscale=true){const out=document.createElement('canvas');out.width=canvas.width;out.height=canvas.height;const x=out.getContext('2d',{alpha:false});x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.fillStyle='#fff';x.fillRect(0,0,out.width,out.height);const base=await bitmapFromKey(frame.baseKey);if(base){x.drawImage(base,0,0,out.width,out.height);base.close?.()}const draw=await bitmapFromKey(frame.drawKey);if(draw){x.drawImage(draw,0,0,out.width,out.height);draw.close?.()}if(frame.imagesKey){const ib=await FrameStore.get(frame.imagesKey);if(ib){try{const items=JSON.parse(await ib.text());for(const item of items){const blob=await FrameStore.get(item.key);if(blob){const bm=await createImageBitmap(blob);x.save();x.translate(item.x+item.w/2,item.y+item.h/2);x.rotate(item.rotation||0);x.drawImage(bm,-item.w/2,-item.h/2,item.w,item.h);x.restore();bm.close?.()}}}catch{}}}if(frame.textKey){const tb=await FrameStore.get(frame.textKey);if(tb){try{x.save();drawTextItems(x,JSON.parse(await tb.text()));x.restore()}catch{}}}const finalCanvas=applyAiUpscale&&$('upscale-4x')?.checked?await aiUpscaleCanvas(out):out;return new Promise(resolve=>finalCanvas.toBlob(resolve,'image/png'))}
 function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000)}
