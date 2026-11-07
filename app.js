@@ -91,11 +91,18 @@ $('audio-track-clip').onpointercancel=()=>{audioDrag=null;updateAudioTrack()};
 function point(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*canvas.width/r.width,y:(e.clientY-r.top)*canvas.height/r.height}}
 function pushUndo(action){undoStack.push(action);if(undoStack.length>8)undoStack.shift()}function snapshot(){pushUndo({type:'draw',data:activeDraw.toDataURL()})}
 function rect(a,b){return{x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(b.x-a.x),h:Math.abs(b.y-a.y)}}
+function shapeEndPoint(a,b,constrain=false){
+ if(!constrain||!['rect','ellipse'].includes(tool))return b;
+ const dx=b.x-a.x,dy=b.y-a.y,side=Math.max(Math.abs(dx),Math.abs(dy));
+ return{x:a.x+Math.sign(dx||1)*side,y:a.y+Math.sign(dy||1)*side};
+}
 function drawShape(target,startPoint,endPoint){
- const d=target;d.save();d.lineWidth=+$('size').value;d.strokeStyle=$('color').value;d.lineCap='round';d.lineJoin='round';d.globalCompositeOperation='source-over';d.beginPath();
+ const d=target;endPoint=shapeEndPoint(startPoint,endPoint,window.__shapeShiftHeld||false);
+ d.save();d.lineWidth=+$('size').value;d.strokeStyle=$('color').value;d.fillStyle=$('color').value;d.lineCap='round';d.lineJoin='round';d.globalCompositeOperation='source-over';d.beginPath();
  if(tool==='line'){d.moveTo(startPoint.x,startPoint.y);d.lineTo(endPoint.x,endPoint.y)}
  else if(tool==='rect'){d.rect(startPoint.x,startPoint.y,endPoint.x-startPoint.x,endPoint.y-startPoint.y)}
  else if(tool==='ellipse'){d.ellipse((startPoint.x+endPoint.x)/2,(startPoint.y+endPoint.y)/2,Math.max(1,Math.abs(endPoint.x-startPoint.x)/2),Math.max(1,Math.abs(endPoint.y-startPoint.y)/2),0,0,Math.PI*2)}
+ if(tool!=='line'&&$('shape-fill')?.checked)d.fill();
  d.stroke();d.restore();
 }
 function paint(p){const d=dctx();d.lineWidth=+$('size').value;d.strokeStyle=$('color').value;d.lineCap='round';d.lineJoin='round';d.globalCompositeOperation=tool==='eraser'?'destination-out':'source-over';if(tool==='eraser')d.lineWidth*=3;d.beginPath();if(tool==='pen'||tool==='eraser'){d.moveTo(last.x,last.y);d.lineTo(p.x,p.y)}d.stroke();d.globalCompositeOperation='source-over'}
@@ -121,7 +128,7 @@ async function deleteSelectedText(){
 async function deleteSelectedImage(){if(imageSelectionIndex<0||!imageItems[imageSelectionIndex])return;const [item]=imageItems.splice(imageSelectionIndex,1);item.bitmap?.close?.();imageSelectionIndex=-1;if(item.key)await FrameStore.del(item.key);await saveImageItems();render();timeline();$('status').textContent='Image deleted'}
 
 function updateToolCursor(){const cursor=tool==='cursor'?'default':tool==='eraser'?'cell':'crosshair';canvas.style.cursor=cursor;$('stage').style.cursor=cursor;$('empty-state').style.pointerEvents='none';$('stage').classList.toggle('text-tool-active',tool==='text');}
-document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x===b));updateToolCursor();render();}));
+document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x===b));$('shape-fill-control').hidden=!['rect','ellipse'].includes(tool);updateToolCursor();render();}));
 updateToolCursor();
 initTextFontControl();
 // Image rotation uses the draggable canvas handle.
@@ -189,7 +196,7 @@ canvas.onpointermove=e=>{
   if((tool==='text'||tool==='cursor')&&textDrag){const o=textItems[textDrag.index],dx=p.x-(textDrag.x||0),dy=p.y-(textDrag.y||0);if(textDrag.mode==='rotate'){const cx=o.x+o.w/2,cy=o.y+o.h/2,angle=Math.atan2(p.y-cy,p.x-cx),delta=angle-textDrag.startAngle;let rotation=textDrag.rotation+delta;if(e.shiftKey)rotation=textDrag.rotation+Math.round(delta/(Math.PI/4))*(Math.PI/4);o.rotation=rotation}else if(textDrag.mode==='resize'){const local=textLocalPoint(o,p),sx=textDrag.startLocalX,sy=textDrag.startLocalY,scale=Math.max(.05,Math.min(20,(local.x*sx+local.y*sy)/Math.max(1,sx*sx+sy*sy))),cx=textDrag.ox+textDrag.ow/2,cy=textDrag.oy+textDrag.oh/2;o.size=Math.max(8,Math.min(300,textDrag.os*scale));fitTextBounds(o);o.x=cx-o.w/2;o.y=cy-o.h/2}else{o.x=textDrag.ox+dx;o.y=textDrag.oy+dy}render();return}
  if(tool==='select'){if(selectionDrag?.mode==='draw'){selection=rect(start,p)}else if(selectionDrag){const d=selectionDrag,dx=p.x-d.startX,dy=p.y-d.startY;if(d.mode==='move'){selection.x=d.x+dx;selection.y=d.y+dy}else if(d.mode==='rotate'){selection.rotation=d.rotation+Math.atan2(p.y-(d.y+d.h/2),p.x-(d.x+d.w/2))-d.startAngle}else if(d.mode==='resize'){const a=-(d.rotation),qx=p.x-(d.x+d.w/2),qy=p.y-(d.y+d.h/2),lx=qx*Math.cos(a)-qy*Math.sin(a),ly=qx*Math.sin(a)+qy*Math.cos(a),sx=d.w/2-6,sy=d.h/2-6,scale=Math.max(.05,(lx*sx+ly*sy)/Math.max(1,sx*sx+sy*sy));selection.w=Math.max(1,d.w*scale);selection.h=Math.max(1,d.h*scale);selection.x=d.x+d.w/2-selection.w/2;selection.y=d.y+d.h/2-selection.h/2}}render();return}
  if(paste){paste.x=p.x-(paste.dragOffset?.x||0);paste.y=p.y-(paste.dragOffset?.y||0);render();return}
- if(['line','rect','ellipse'].includes(tool)){shapePreviewEnd=p}
+ if(['line','rect','ellipse'].includes(tool)){shapePreviewEnd=shapeEndPoint(start,p,e.shiftKey)}
  else if(tool==='pen'||tool==='eraser'){paint(p);activeDrawDirty=true;}
  last=p;render();
 };
@@ -203,7 +210,7 @@ canvas.onpointerup=async e=>{
  if(['line','rect','ellipse'].includes(tool)){
   // Commit exactly one final shape to the drawing layer. The live preview
   // was drawn only on the display canvas, never into activeDraw.
-  drawShape(dctx(),start,p);activeDrawDirty=true;shapePreviewEnd=null;
+  window.__shapeShiftHeld=e.shiftKey;drawShape(dctx(),start,p);window.__shapeShiftHeld=false;activeDrawDirty=true;shapePreviewEnd=null;
  }
  if(paste){dctx().save();dctx().translate(paste.x+paste.w/2,paste.y+paste.h/2);dctx().rotate(paste.rotation||0);dctx().drawImage(paste.img,-paste.w/2,-paste.h/2,paste.w,paste.h);dctx().restore();activeDrawDirty=true;paste=null}
  if(selection){selection=rect(start,{x:start.x+selection.w,y:start.y+selection.h});const x=Math.round(selection.x),y=Math.round(selection.y),w=Math.max(1,Math.round(selection.w)),h=Math.max(1,Math.round(selection.h));if(w>1&&h>1){const floating=document.createElement('canvas');floating.width=w;floating.height=h;floating.getContext('2d').drawImage(activeDraw,x,y,w,h,0,0,w,h);dctx().clearRect(x,y,w,h);paste={img:floating,x,y,w,h,rotation:0,drag:null};activeDrawDirty=true}selection=null}
