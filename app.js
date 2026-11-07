@@ -376,7 +376,7 @@ function getUpscaleWorker(){
   if(stage){
    pending.lastStage=stage;
    const labels={loading:'Loading AI upscaler runtime…',model:'Loading AI super-resolution model (first run can take a little while)…',upscaling:'AI model ready — enhancing frame…'};
-   $('status').textContent=labels[stage]||'AI upscaling…';
+   $('status').textContent=stage==='progress'?'AI enhancing frame… '+Math.round((e.data.progress||0)*100)+'%':(labels[stage]||'AI upscaling…');
    return;
   }
   upscalePending.delete(id);clearTimeout(pending.timer);
