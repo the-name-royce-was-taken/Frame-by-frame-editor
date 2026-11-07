@@ -384,7 +384,9 @@ async function getAIUpscaler(){
   await loadExternalScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js');
   await loadExternalScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/tf-backend-wasm.min.js');
   if(window.tf?.wasm?.setWasmPaths)window.tf.wasm.setWasmPaths('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/');
-  await window.tf.setBackend('wasm');
+  let wasmReady=false;
+  try{wasmReady=await window.tf.setBackend('wasm')}catch(error){console.warn('WASM backend unavailable; using CPU backend',error)}
+  if(!wasmReady)await window.tf.setBackend('cpu');
   if(window.tf?.ready)await window.tf.ready();
   await loadExternalScript('https://cdn.jsdelivr.net/npm/@upscalerjs/esrgan-thick@latest/dist/umd/4x.min.js');
   await loadExternalScript('https://cdn.jsdelivr.net/npm/upscaler@latest/dist/browser/umd/upscaler.min.js');
