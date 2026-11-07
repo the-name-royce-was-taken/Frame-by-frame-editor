@@ -23,23 +23,26 @@ async function loadEngine(){
 self.onmessage=async event=>{
  const {id,bitmap}=event.data||{};
  if(!bitmap)return;
- let small=null;
+ let small=null,inputTensor=null,outputTensor=null;
  try{
   const upscaler=await loadEngine();
   small=new OffscreenCanvas(Math.max(1,Math.round(bitmap.width/2)),Math.max(1,Math.round(bitmap.height/2)));
-  const ctx=small.getContext('2d',{alpha:false});
+  const ctx=small.getContext('2d',{alpha:false,willReadFrequently:true});
   ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
   ctx.drawImage(bitmap,0,0,small.width,small.height);
   bitmap.close?.();
-  const result=await upscaler.upscale(small,{patchSize:32,padding:4});
-  const response=await fetch(result);
-  if(!response.ok)throw Error('Could not read the AI upscaler output.');
-  const output=await createImageBitmap(await response.blob());
-  self.postMessage({id,bitmap:output},[output]);
+  const pixels=ctx.getImageData(0,0,small.width,small.height).data;
+  const rgb=new Int32Array(small.width*small.height*3);
+  for(let src=0,dst=0;dst<rgb.length;src+=4,dst+=3){rgb[dst]=pixels[src];rgb[dst+1]=pixels[src+1];rgb[dst+2]=pixels[src+2]}
+  inputTensor=tf.tensor3d(rgb,[small.height,small.width,3],'int32');
+  outputTensor=await upscaler.upscale(inputTensor,{output:'tensor',patchSize:32,padding:4});
+  const shape=outputTensor.shape.slice(-3),data=await outputTensor.data(),transferable=data.slice().buffer;
+  self.postMessage({id,data:transferable,shape},[transferable]);
  }catch(error){
   bitmap.close?.();
   self.postMessage({id,error:error?.message||String(error)});
  }finally{
+  inputTensor?.dispose();outputTensor?.dispose();
   if(small){small.width=1;small.height=1}
  }
 };
