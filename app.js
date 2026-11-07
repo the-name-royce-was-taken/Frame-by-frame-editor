@@ -384,7 +384,7 @@ function getUpscaleWorker(){
  };
  upscaleWorker.onerror=e=>{
   const error=Error(e.message||'AI upscaling worker failed');
-  for(const pending of upscalePending.values())pending.reject(error);
+  for(const pending of upscalePending.values()){clearTimeout(pending.timer);pending.reject(error)}
   upscalePending.clear();upscaleWorker?.terminate();upscaleWorker=null;
  };
  return upscaleWorker;
