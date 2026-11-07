@@ -280,7 +280,7 @@ async function buildStitchedPreview(){
   args.push('-filter_complex',filters.join(';'),'-map','[aout]');
  }
  args.push('-c:v','libx264','-preset','ultrafast','-pix_fmt','yuv420p','-movflags','+faststart');
- if(audioInputs.length)args.push('-c:a',webm?'libopus':'aac','-b:a','192k');
+ if(audioInputs.length)args.push('-c:a','aac','-b:a','192k');
  args.push('-fps_mode','passthrough','-frames:v',String(frames.length),'-t',String(frames.length*frameDuration),'edited-preview.mp4');
  $('status').textContent='Encoding stitched playback video…';
  const exitCode=await ff.exec(args);
