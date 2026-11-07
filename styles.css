@@ -196,7 +196,3 @@ body.dark-mode .theme-toggle:hover{background:#383e35}
 .thumb-delete:disabled{opacity:.3;cursor:not-allowed}
 body.dark-mode .thumb-delete{background:#292f29;border-color:#596052;color:#e0b5a1}
 body.dark-mode .thumb-delete:hover:not(:disabled){background:#49332e;border-color:#d09270;color:#ffd4bf}
-
-/* Keep the native image input accessible while the styled label opens its picker. */
-.image-file-input{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.image-upload-tool{display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer}
