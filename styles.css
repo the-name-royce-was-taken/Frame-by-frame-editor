@@ -230,3 +230,5 @@ body.dark-mode .audio-track-delete{background:#292f29;border-color:#596052;color
 body.dark-mode .audio-track-delete:hover{background:#49332e;border-color:#d09270;color:#ffd4bf}
 
 .audio-track-delete svg{display:block;width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+.audio-track-clip{height:30px;bottom:auto}
