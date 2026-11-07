@@ -280,8 +280,8 @@ async function buildStitchedPreview(){
   args.push('-filter_complex',filters.join(';'),'-map','[aout]');
  }
  args.push('-c:v','libx264','-preset','ultrafast','-pix_fmt','yuv420p','-movflags','+faststart');
- if(audioInputs.length)args.push('-c:a','aac','-b:a','192k','-shortest');
- args.push('edited-preview.mp4');
+ if(audioInputs.length)args.push('-c:a','aac','-b:a','192k');
+ args.push('-t',String(frames.length*frameDuration),'edited-preview.mp4');
  $('status').textContent='Encoding stitched playback video…';
  const exitCode=await ff.exec(args);
  if(exitCode!==0)throw Error('The video encoder returned code '+exitCode);
@@ -334,9 +334,9 @@ args.push('-map','0:v:0');
 if(audioInputs.length){
  const filters=audioInputs.map((item,i)=>'['+item.input+':a:0]adelay='+item.offset+'|'+item.offset+'[a'+i+']');
  filters.push(audioInputs.map((_,i)=>'[a'+i+']').join('')+'amix=inputs='+audioInputs.length+':duration=longest:dropout_transition=0[aout]');
- args.push('-filter_complex',filters.join(';'),'-map','[aout]','-shortest');
+ args.push('-filter_complex',filters.join(';'),'-map','[aout]');
 }
-args.push('-c:v',codec,'-pix_fmt','yuv420p');if(codec==='libx264')args.push('-preset','ultrafast');args.push('out.'+ext);$('status').textContent='Encoding export…';const exitCode=await ff.exec(args);if(exitCode!==0)throw Error('FFmpeg encoder exited with code '+exitCode);const output=await ff.readFile('out.'+ext);if(!output||!output.length)throw Error('FFmpeg created an empty export');download(new Blob([output],{type:ext==='mov'?'video/quicktime':'video/mp4'}),'frameforge.'+ext);$('status').textContent='Export finished'}catch(err){$('status').textContent='Export failed: '+err.message+' (try WebM)';console.error(err)}};
+args.push('-c:v',codec,'-pix_fmt','yuv420p');if(codec==='libx264')args.push('-preset','ultrafast');args.push('-t',String(frames.length*frameDuration),'out.'+ext);$('status').textContent='Encoding export…';const exitCode=await ff.exec(args);if(exitCode!==0)throw Error('FFmpeg encoder exited with code '+exitCode);const output=await ff.readFile('out.'+ext);if(!output||!output.length)throw Error('FFmpeg created an empty export');download(new Blob([output],{type:ext==='mov'?'video/quicktime':'video/mp4'}),'frameforge.'+ext);$('status').textContent='Export finished'}catch(err){$('status').textContent='Export failed: '+err.message+' (try WebM)';console.error(err)}};
 $('text-copy').onclick=()=>copySelectedText(false);
 $('text-cut').onclick=()=>copySelectedText(true);
 $('text-delete').onclick=deleteSelectedText;
