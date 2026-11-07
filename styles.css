@@ -240,3 +240,5 @@ body.dark-mode .audio-track-delete:hover{background:#49332e;border-color:#d09270
 .upscale-toggle input{accent-color:var(--accent)}
 .upscale-control small{display:block;margin-top:6px;color:var(--muted);font-size:10px;line-height:1.45}
 body.dark-mode .upscale-control{background:#2b2f2a;border-color:#454b42}
+
+.upscale-control small{max-width:240px}
