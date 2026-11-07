@@ -7,7 +7,30 @@ function blankFrame(time=0){return {baseKey:null,drawKey:null,textKey:null,image
 function imageMetadata(){return imageItems.map(({key,x,y,w,h,rotation=0})=>({key,x,y,w,h,rotation}))}
 function syncFrameImages(){if(frames[index])frames[index].images=imageMetadata()}
 function drawOneImage(target,o){if(!o.bitmap)return;target.save();target.translate(o.x+o.w/2,o.y+o.h/2);target.rotate(o.rotation||0);target.drawImage(o.bitmap,-o.w/2,-o.h/2,o.w,o.h);target.restore()}
-async function decodeUploadedImage(file){try{return await createImageBitmap(file)}catch(bitmapError){const url=URL.createObjectURL(file);try{const img=new Image();img.decoding='async';img.src=url;await img.decode();return img}catch(imageError){throw Error('This browser could not decode this image ('+(bitmapError.message||'unsupported format')+'). Try PNG, JPG, or WebP.')}finally{URL.revokeObjectURL(url)}}}
+async function decodeImageFile(file){
+ const url=URL.createObjectURL(file);
+ try{
+  if(typeof createImageBitmap==='function'){
+   try{return await createImageBitmap(file,{imageOrientation:'from-image'})}catch{}
+  }
+  const img=new Image();img.decoding='async';img.src=url;
+  await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(Error('The browser image decoder rejected this file.'))});
+  if(!img.naturalWidth||!img.naturalHeight)throw Error('The selected image has no readable dimensions.');
+  return img;
+ }finally{URL.revokeObjectURL(url)}
+}
+async function resampleImageForCanvas(source){
+ const scale=Math.min(1,canvas.width/source.width,canvas.height/source.height);
+ const width=Math.max(1,Math.round(source.width*scale)),height=Math.max(1,Math.round(source.height*scale));
+ const buffer=document.createElement('canvas');buffer.width=width;buffer.height=height;
+ const bctx=buffer.getContext('2d',{alpha:true});
+ if(!bctx)throw Error('Could not create an image-processing canvas.');
+ bctx.imageSmoothingEnabled=true;bctx.imageSmoothingQuality='high';
+ bctx.drawImage(source,0,0,width,height);
+ const blob=await new Promise((resolve,reject)=>buffer.toBlob(value=>value?resolve(value):reject(Error('Image rescaling failed.')),'image/png'));
+ const bitmap=typeof createImageBitmap==='function'?await createImageBitmap(blob):await decodeImageFile(blob);
+ return {bitmap,blob,width,height};
+}
 function drawImageItems(target,handles=false){imageItems.forEach((o,i)=>{if(!o.bitmap)return;drawOneImage(target,o);if(handles&&i===imageSelectionIndex){target.save();target.translate(o.x+o.w/2,o.y+o.h/2);target.rotate(o.rotation||0);target.strokeStyle='#ad5b3d';target.lineWidth=2;target.setLineDash([5,3]);target.strokeRect(-o.w/2,-o.h/2,o.w,o.h);target.setLineDash([]);target.fillStyle='#ad5b3d';target.fillRect(o.w/2-7,o.h/2-7,14,14);target.beginPath();target.arc(0,-o.h/2-22,12,0,Math.PI*1.72);target.stroke();target.beginPath();target.moveTo(10,-o.h/2-29);target.lineTo(12,-o.h/2-20);target.lineTo(3,-o.h/2-21);target.closePath();target.fill();target.restore()}})}
 function imageHit(o,p){const dx=p.x-(o.x+o.w/2),dy=p.y-(o.y+o.h/2),r=-(o.rotation||0),x=dx*Math.cos(r)-dy*Math.sin(r),y=dx*Math.sin(r)+dy*Math.cos(r);return (Math.abs(x)<=o.w/2&&Math.abs(y)<=o.h/2)||Math.hypot(x,y+o.h/2+22)<14}
 function imageHandle(o,p){const dx=p.x-(o.x+o.w/2),dy=p.y-(o.y+o.h/2),r=-(o.rotation||0),x=dx*Math.cos(r)-dy*Math.sin(r),y=dx*Math.sin(r)+dy*Math.cos(r);if(Math.hypot(x,y+o.h/2+22)<12)return 'rotate';if(x>o.w/2-16&&y>o.h/2-16)return 'resize';return 'move'}
@@ -126,7 +149,35 @@ function updateToolCursor(){const cursor=tool==='cursor'?'default':tool==='erase
 document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x===b));updateToolCursor();render();}));
 updateToolCursor();
 initTextFontControl();
-$('image-file').onchange=async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;let bitmap;try{$('status').textContent='Loading image…';if(!frames.length){frames=[blankFrame()];index=0}if(!file.type.startsWith('image/')&&!/\.(png|jpe?g|gif|webp|bmp|svg|avif|tiff?)$/i.test(file.name))throw Error('Please choose an image file.');bitmap=await decodeUploadedImage(file);if(!bitmap.width||!bitmap.height)throw Error('This image has no usable dimensions.');++loadToken;const scale=Math.min(1,canvas.width/bitmap.width,canvas.height/bitmap.height),w=bitmap.width*scale,h=bitmap.height*scale,imageKey=key('image');const item={key:imageKey,x:(canvas.width-w)/2,y:(canvas.height-h)/2,w,h,rotation:0,bitmap};imageItems.push(item);imageSelectionIndex=imageItems.length-1;textSelectionIndex=-1;tool='cursor';document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool==='cursor'));updateToolCursor();syncFrameImages();await render();timeline();$('status').textContent='Image added to canvas · '+file.name+' · '+bitmap.width+' × '+bitmap.height+' px';try{await FrameStore.put(imageKey,file)}catch(storeError){console.error('Image storage failed:',storeError);$('status').textContent='Image displayed, but local storage failed: '+storeError.message}}catch(err){bitmap?.close?.();console.error('Image upload failed:',err);$('status').textContent='Could not load image: '+err.message;alert('Could not load this image: '+err.message)}};
+const imageFileInput=$('image-file');
+$('image-upload-trigger').addEventListener('click',()=>imageFileInput.click());
+imageFileInput.addEventListener('change',async e=>{
+ const file=e.target.files?.[0];e.target.value='';if(!file)return;
+ let source=null,bitmap=null;
+ try{
+  $('status').textContent='Decoding image…';
+  if(!file.type.startsWith('image/')&&!/\\.(png|jpe?g|gif|webp|bmp|svg|avif|tiff?)$/i.test(file.name))throw Error('Please choose an image file.');
+  source=await decodeImageFile(file);
+  if(!source.width||!source.height)throw Error('The selected image has no readable dimensions.');
+  $('status').textContent='Rescaling image…';
+  const processed=await resampleImageForCanvas(source);bitmap=processed.bitmap;
+  const imageKey=key('image');
+  let storageWarning='';
+  try{await FrameStore.put(imageKey,processed.blob)}catch(storageError){storageWarning=' (storage failed: '+storageError.message+')';console.error('Image storage failed:',storageError)}
+  ++loadToken;
+  if(!frames.length){frames=[blankFrame()];index=0}
+  const item={key:imageKey,x:(canvas.width-processed.width)/2,y:(canvas.height-processed.height)/2,w:processed.width,h:processed.height,rotation:0,bitmap};
+  imageItems.push(item);imageSelectionIndex=imageItems.length-1;textSelectionIndex=-1;
+  tool='cursor';document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool==='cursor'));
+  updateToolCursor();syncFrameImages();await render();timeline();
+  $('status').textContent='Image loaded · '+file.name+' · '+source.width+' × '+source.height+' px'+storageWarning;
+  bitmap=null;
+ }catch(err){
+  bitmap?.close?.();console.error('Image upload failed:',err);
+  $('status').textContent='Image load failed: '+(err?.message||String(err));
+  alert('Image load failed: '+(err?.message||String(err)));
+ }finally{source?.close?.()}
+});
 $('size').oninput=e=>$('size-value').textContent=e.target.value+' px';
 canvas.onpointerdown=e=>{
  if(!frames.length)return;
