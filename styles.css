@@ -203,3 +203,9 @@ body.dark-mode .thumb-delete:hover:not(:disabled){background:#49332e;border-colo
 .stage{position:relative}
 .stage .image-rotate-toggle{position:absolute!important;z-index:55;width:18px;height:18px;min-width:0;min-height:0;padding:0;display:grid;place-items:center;border:1px solid #3a0770;border-radius:4px;background:#fff;color:#3a0770;font:700 16px/16px Arial,sans-serif;cursor:pointer;box-shadow:0 1px 3px #0003}
 .stage .image-rotate-toggle[hidden]{display:none!important}
+
+
+/* Shape fill control sits beside the canvas dimensions. */
+.shape-fill-control{display:inline-flex;align-items:center;gap:7px;margin-left:auto;margin-right:18px;padding:5px 9px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--text);font-size:11px;white-space:nowrap;cursor:pointer}
+.shape-fill-control[hidden]{display:none!important}
+.shape-fill-control input{accent-color:var(--accent);margin:0}
