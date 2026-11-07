@@ -38,7 +38,10 @@ self.onmessage=async event=>{
   for(let src=0,dst=0;dst<rgb.length;src+=4,dst+=3){rgb[dst]=pixels[src];rgb[dst+1]=pixels[src+1];rgb[dst+2]=pixels[src+2]}
   inputTensor=tf.tensor3d(rgb,[small.height,small.width,3],'int32');
   self.postMessage({id,stage:'upscaling'});
-  outputTensor=await upscaler.upscale(inputTensor,{output:'tensor',patchSize:32,padding:4});
+  outputTensor=await upscaler.upscale(inputTensor,{
+   output:'tensor',patchSize:32,padding:4,
+   progress:progress=>self.postMessage({id,stage:'progress',progress})
+  });
   const shape=outputTensor.shape.slice(-3),data=await outputTensor.data(),transferable=data.slice().buffer;
   self.postMessage({id,data:transferable,shape},[transferable]);
  }catch(error){
