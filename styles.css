@@ -232,3 +232,11 @@ body.dark-mode .audio-track-delete:hover{background:#49332e;border-color:#d09270
 .audio-track-delete svg{display:block;width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 
 .audio-track-clip{height:30px;bottom:auto}
+
+
+/* Optional 4x high-resolution export control. */
+.upscale-control{padding:10px 11px;border:1px solid var(--line);border-radius:7px;background:var(--panel-2)}
+.upscale-toggle{display:flex;align-items:center;gap:8px;margin-top:7px;font-size:12px;cursor:pointer}
+.upscale-toggle input{accent-color:var(--accent)}
+.upscale-control small{display:block;margin-top:6px;color:var(--muted);font-size:10px;line-height:1.45}
+body.dark-mode .upscale-control{background:#2b2f2a;border-color:#454b42}
