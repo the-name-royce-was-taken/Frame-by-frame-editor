@@ -272,3 +272,7 @@ body.dark-mode .zoom-frame-button.active span,body.dark-mode .frame-size-button.
 .thumb-duplicate:hover{background:#c9c0b1;border-color:#a99e8d;color:#493b30}
 body.dark-mode .thumb-duplicate{border-color:#596052;background:#292f29;color:#e0b5a1}
 body.dark-mode .thumb-duplicate:hover{background:#49332e;border-color:#d09270;color:#ffd4bf}
+
+
+/* Thumbnail frame numbers keep their light-mode appearance and stay white in dark mode. */
+body.dark-mode .thumb small{color:#fff}
