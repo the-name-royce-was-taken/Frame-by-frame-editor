@@ -121,7 +121,7 @@ function updateToolCursor(){const cursor=tool==='cursor'?'default':tool==='erase
 document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x===b));updateToolCursor();render();}));
 updateToolCursor();
 initTextFontControl();
-initImageRotateControl();
+// Image rotation uses the draggable canvas handle.
 $('image-file').onchange=async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{if(!frames.length){frames=[blankFrame()];await loadFrame(0)}const bitmap=await createImageBitmap(file);if(!bitmap.width||!bitmap.height)throw Error('This image has no usable dimensions.');const imageKey=key('image');await FrameStore.put(imageKey,file);const scale=Math.min(1,canvas.width/bitmap.width,canvas.height/bitmap.height),w=bitmap.width*scale,h=bitmap.height*scale;imageItems.push({key:imageKey,x:(canvas.width-w)/2,y:(canvas.height-h)/2,w,h,rotation:0,bitmap});imageSelectionIndex=imageItems.length-1;textSelectionIndex=-1;tool='cursor';document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool==='cursor'));updateToolCursor();await saveImageItems();render();timeline();$('status').textContent=file.name+' · '+bitmap.width+' × '+bitmap.height+' px'}catch(err){$('status').textContent='Could not load image: '+err.message;alert('Could not load this image: '+err.message)}};
 $('image-upload').onclick=()=>$('image-file').click();
 $('size').oninput=e=>$('size-value').textContent=e.target.value+' px';
