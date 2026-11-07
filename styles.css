@@ -276,3 +276,8 @@ body.dark-mode .thumb-duplicate:hover{background:#49332e;border-color:#d09270;co
 
 /* Thumbnail frame numbers keep their light-mode appearance and stay white in dark mode. */
 body.dark-mode .thumb small{color:#fff}
+
+
+/* Frame-number badge: black with white text in light mode, inverted in dark mode. */
+.thumb small{background:#111;color:#fff}
+body.dark-mode .thumb small{background:#fff;color:#111}
