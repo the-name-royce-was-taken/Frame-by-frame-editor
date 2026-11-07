@@ -218,3 +218,13 @@ body.dark-mode .thumb-delete:hover:not(:disabled){background:#49332e;border-colo
 .polygon-sides-control{display:inline-flex;align-items:center;gap:7px;margin-right:14px;padding:5px 9px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--text);font-size:11px;white-space:nowrap}
 .polygon-sides-control input[type="range"]{width:92px;accent-color:var(--accent)}
 .polygon-sides-control input[type="number"]{width:43px;padding:3px 4px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--text);font:inherit}
+
+
+/* Multi-channel audio timeline: each soundtrack has its own draggable row. */
+.audio-track-lane{height:auto;min-height:34px;overflow:visible}
+.audio-track-clip{height:30px;top:4px;box-sizing:border-box;padding:0 8px 0 27px;overflow:hidden;display:flex;align-items:center}
+.audio-track-delete{position:absolute;left:3px;top:3px;z-index:2;width:21px;height:21px;padding:0;border:1px solid #d8d4ca;border-radius:4px;background:#f7f5f0;color:#795346;font-size:12px;line-height:18px;cursor:pointer}
+.audio-track-delete:hover{background:#f1e1dc;border-color:#ad5b3d;color:#923f2d}
+.audio-track-clip-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
+body.dark-mode .audio-track-delete{background:#292f29;border-color:#596052;color:#e0b5a1}
+body.dark-mode .audio-track-delete:hover{background:#49332e;border-color:#d09270;color:#ffd4bf}
