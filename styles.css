@@ -258,3 +258,10 @@ body.dark-mode .zoom-frame-button.active{background:#49392f;border-color:#c17b5b
 /* Keep Zoom frame selection visually consistent with the drawing tools. */
 .zoom-frame-button.active{border-color:#b86a4d;background:#f4e8e1;color:#713e2e;box-shadow:inset 3px 0 #ad5b3d}.zoom-frame-button.active .zoom-icon{color:#ad5b3d}
 body.dark-mode .zoom-frame-button.active{background:#49392f;border-color:#c17b5b;color:#fff;box-shadow:inset 3px 0 #c17b5b}body.dark-mode .zoom-frame-button.active .zoom-icon{color:#e0a080}
+
+/* Zoom and frame-size controls use the same footprint as the drawing tools. */
+.zoom-frame-button,.frame-size-button{width:100%;min-width:0;justify-content:flex-start;margin:0;font:500 12px 'DM Sans',sans-serif}
+.zoom-frame-button.active,.frame-size-button.active{border-color:#b86a4d;background:#f4e8e1;color:#713e2e;box-shadow:inset 3px 0 #ad5b3d}
+.zoom-frame-button.active span,.frame-size-button.active span{color:#ad5b3d}
+body.dark-mode .zoom-frame-button.active,body.dark-mode .frame-size-button.active{background:#49392f;border-color:#c17b5b;color:#fff;box-shadow:inset 3px 0 #c17b5b}
+body.dark-mode .zoom-frame-button.active span,body.dark-mode .frame-size-button.active span{color:#e0a080}
