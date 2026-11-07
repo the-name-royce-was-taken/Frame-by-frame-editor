@@ -371,9 +371,15 @@ function getUpscaleWorker(){
  if(upscaleWorker)return upscaleWorker;
  upscaleWorker=new Worker(new URL('upscale-worker.js?v=20261108-tensor-output',location.href));
  upscaleWorker.onmessage=e=>{
-  const {id,bitmap,data,shape,error}=e.data||{},pending=upscalePending.get(id);
+  const {id,bitmap,data,shape,error,stage}=e.data||{},pending=upscalePending.get(id);
   if(!pending){bitmap?.close?.();return}
-  upscalePending.delete(id);
+  if(stage){
+   pending.lastStage=stage;
+   const labels={loading:'Loading AI upscaler runtime…',model:'Loading AI super-resolution model (first run can take a little while)…',upscaling:'AI model ready — enhancing frame…'};
+   $('status').textContent=labels[stage]||'AI upscaling…';
+   return;
+  }
+  upscalePending.delete(id);clearTimeout(pending.timer);
   if(error)pending.reject(Error(error));else if(data&&shape)pending.resolve({data:new Float32Array(data),shape});else pending.reject(Error('AI upscaler returned no image data.'));
  };
  upscaleWorker.onerror=e=>{
@@ -384,7 +390,7 @@ function getUpscaleWorker(){
  return upscaleWorker;
 }
 async function aiUpscaleCanvas(source){
- $('status').textContent='Preparing lightweight AI upscale in background…';
+ $('status').textContent='Starting AI upscaler…';
  const input=document.createElement('canvas');
  input.width=Math.max(1,Math.round(source.width/2));input.height=Math.max(1,Math.round(source.height/2));
  const inputCtx=input.getContext('2d',{alpha:false});
@@ -393,8 +399,16 @@ async function aiUpscaleCanvas(source){
  const bitmap=await createImageBitmap(input);input.width=1;input.height=1;
  const id=++upscaleRequestId,worker=getUpscaleWorker();
  const result=await new Promise((resolve,reject)=>{
-  upscalePending.set(id,{resolve,reject});
-  worker.postMessage({id,bitmap},[bitmap]);
+  const pending={resolve,reject,lastStage:'loading'};
+  pending.timer=setTimeout(()=>{
+   if(!upscalePending.has(id))return;
+   upscalePending.delete(id);
+   reject(Error('AI upscaler did not respond within 3 minutes. Check your connection and reload the editor before trying again.'));
+   for(const item of upscalePending.values())item.reject(Error('AI upscaler timed out.'));
+   upscalePending.clear();upscaleWorker?.terminate();upscaleWorker=null;
+  },180000);
+  upscalePending.set(id,pending);
+  try{worker.postMessage({id,bitmap},[bitmap])}catch(error){clearTimeout(pending.timer);upscalePending.delete(id);reject(error)}
  });
  const [height,width,channels]=result.shape;
  if(!height||!width||channels<3)throw Error('AI upscaler returned an invalid image shape.');
