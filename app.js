@@ -96,19 +96,14 @@ function shapeEndPoint(a,b,constrain=false){
  const dx=b.x-a.x,dy=b.y-a.y,side=Math.max(Math.abs(dx),Math.abs(dy));
  return{x:a.x+Math.sign(dx||1)*side,y:a.y+Math.sign(dy||1)*side};
 }
+function regularShapeBounds(a,b){const cx=(a.x+b.x)/2,cy=(a.y+b.y)/2,r=Math.max(1,Math.max(Math.abs(b.x-a.x),Math.abs(b.y-a.y))/2);return{cx,cy,r}}
 function drawShape(target,startPoint,endPoint,constrain=false){
  const d=target;endPoint=shapeEndPoint(startPoint,endPoint,constrain);
  d.save();d.lineWidth=+$('size').value;d.strokeStyle=$('color').value;d.fillStyle=$('color').value;d.lineCap='round';d.lineJoin='round';d.globalCompositeOperation='source-over';d.beginPath();
  if(tool==='line'){d.moveTo(startPoint.x,startPoint.y);d.lineTo(endPoint.x,endPoint.y)}
  else if(tool==='rect'){d.rect(startPoint.x,startPoint.y,endPoint.x-startPoint.x,endPoint.y-startPoint.y)}
  else if(tool==='ellipse'){d.ellipse((startPoint.x+endPoint.x)/2,(startPoint.y+endPoint.y)/2,Math.max(1,Math.abs(endPoint.x-startPoint.x)/2),Math.max(1,Math.abs(endPoint.y-startPoint.y)/2),0,0,Math.PI*2)}
- else if(tool==='triangle'||tool==='polygon'){
-  const cx=(startPoint.x+endPoint.x)/2,cy=(startPoint.y+endPoint.y)/2;
-  const radius=Math.max(1,Math.max(Math.abs(endPoint.x-startPoint.x),Math.abs(endPoint.y-startPoint.y))/2);
-  const sides=tool==='triangle'?3:Math.max(1,Math.min(30,Math.round(+$('polygon-sides').value||6)));
-  for(let i=0;i<sides;i++){const angle=-Math.PI/2+i*Math.PI*2/sides,x=cx+Math.cos(angle)*radius,y=cy+Math.sin(angle)*radius;if(i===0)d.moveTo(x,y);else d.lineTo(x,y)}
-  d.closePath();
- }
+ else if(tool==='triangle'||tool==='polygon'){const {cx,cy,r}=regularShapeBounds(startPoint,endPoint),sides=tool==='triangle'?3:Math.max(5,Math.min(30,Math.round(+$('polygon-sides').value||6)));for(let i=0;i<sides;i++){const angle=-Math.PI/2+i*Math.PI*2/sides,x=cx+Math.cos(angle)*r,y=cy+Math.sin(angle)*r;if(i===0)d.moveTo(x,y);else d.lineTo(x,y)}d.closePath()}
  if(tool!=='line'&&$('shape-fill')?.checked)d.fill();
  d.stroke();d.restore();
 }
@@ -135,7 +130,8 @@ async function deleteSelectedText(){
 async function deleteSelectedImage(){if(imageSelectionIndex<0||!imageItems[imageSelectionIndex])return;const [item]=imageItems.splice(imageSelectionIndex,1);item.bitmap?.close?.();imageSelectionIndex=-1;if(item.key)await FrameStore.del(item.key);await saveImageItems();render();timeline();$('status').textContent='Image deleted'}
 
 function updateToolCursor(){const cursor=tool==='cursor'?'default':tool==='eraser'?'cell':'crosshair';canvas.style.cursor=cursor;$('stage').style.cursor=cursor;$('empty-state').style.pointerEvents='none';$('stage').classList.toggle('text-tool-active',tool==='text');}
-document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x===b));$('shape-fill-control').hidden=!['rect','ellipse','triangle','polygon'].includes(tool);$('polygon-sides-control').hidden=tool!=='polygon';updateToolCursor();render();}));\nconst syncPolygonSides=()=>{const n=Math.max(1,Math.min(30,Math.round(+$('polygon-sides-number').value||1)));$('polygon-sides').value=n;$('polygon-sides-number').value=n;render()};$('polygon-sides').addEventListener('input',()=>{$('polygon-sides-number').value=$('polygon-sides').value;render()});$('polygon-sides-number').addEventListener('change',syncPolygonSides);
+document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x===b));$('shape-fill-control').hidden=!['rect','ellipse','triangle','polygon'].includes(tool);$('polygon-sides-control').hidden=tool!=='polygon';updateToolCursor();render();}));
+const syncPolygonSides=()=>{const n=Math.max(5,Math.min(30,Math.round(+$('polygon-sides-number').value||5)));$('polygon-sides').value=n;$('polygon-sides-number').value=n;render()};$('polygon-sides').addEventListener('input',()=>{$('polygon-sides-number').value=$('polygon-sides').value;render()});$('polygon-sides-number').addEventListener('change',syncPolygonSides);
 updateToolCursor();
 initTextFontControl();
 // Image rotation uses the draggable canvas handle.
