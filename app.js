@@ -1,5 +1,6 @@
 const $=id=>document.getElementById(id),canvas=$('c'),ctx=canvas.getContext('2d',{alpha:false}),video=$('preview-video');
 let sourceVideo=null,stitchedPreviewUrl=null,shapePreviewEnd=null;
+let zoomMode=false,frameZoom=1,frameZoomX=0,frameZoomY=0,zoomHoldTimer=null,zoomHoldTriggered=false;
 let activeDrawDirty=false,frames=[],index=0,tool='pen',drawing=false,start,last,selection=null,textItems=[],textSelectionIndex=-1,textDrag=null,imageItems=[],imageSelectionIndex=-1,imageDrag=null,imageRotateControl=null,clipboard=null,clipboardPosition=null,paste=null,audioFile=null,videoFile=null,audioTrackSource=null,audioDuration=0,audioOffsetFrame=0,audioDrag=null,audioTracks=[],audioTrackSeq=0,undoStack=[],playTimer=null,activeDraw=document.createElement('canvas'),activeBase=null,frameSeq=0,loadToken=0,previewCallback=0,previewPlaying=false,frameDuration=1/30;
 activeDraw.width=canvas.width;activeDraw.height=canvas.height;
 const key=(kind)=>kind+'-'+Date.now().toString(36)+'-'+(++frameSeq).toString(36);
@@ -101,7 +102,13 @@ function updateAudioTrack(){
  });
  $('audio-track-label').textContent=tracks.length?tracks.length+' audio track'+(tracks.length===1?'':'s')+' · mix together':'Audio tracks';
 }
-function point(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*canvas.width/r.width,y:(e.clientY-r.top)*canvas.height/r.height}}
+function point(e){const r=canvas.getBoundingClientRect(),z=frameZoom;return{x:(e.clientX-r.left)/z*canvas.width/canvas.offsetWidth,y:(e.clientY-r.top)/z*canvas.height/canvas.offsetHeight}}
+function applyFrameZoom(){canvas.style.transform=`translate(${frameZoomX}px,${frameZoomY}px) scale(${frameZoom})`;canvas.style.transformOrigin='0 0';canvas.style.cursor=zoomMode?'zoom-in':(tool==='cursor'?'default':tool==='eraser'?'cell':'crosshair');$('zoom-frame').classList.toggle('active',zoomMode);$('zoom-frame').setAttribute('aria-pressed',String(zoomMode));$('zoom-frame').title=zoomMode?'Zoom mode active — scroll over the canvas to zoom; hold to reset':'Click to enable zoom; hold to reset zoom'}
+function resetFrameZoom(){frameZoom=1;frameZoomX=frameZoomY=0;zoomMode=false;applyFrameZoom();$('status').textContent='Frame zoom reset'}
+$('zoom-frame').addEventListener('click',()=>{if(zoomHoldTriggered){zoomHoldTriggered=false;return}zoomMode=!zoomMode;applyFrameZoom();$('status').textContent=zoomMode?'Zoom mode: scroll over the canvas to zoom':'Zoom mode off'});
+$('zoom-frame').addEventListener('pointerdown',()=>{zoomHoldTriggered=false;zoomHoldTimer=setTimeout(()=>{zoomHoldTriggered=true;resetFrameZoom()},650)});
+['pointerup','pointercancel','pointerleave'].forEach(type=>$('zoom-frame').addEventListener(type,()=>clearTimeout(zoomHoldTimer)));
+$('stage').addEventListener('wheel',e=>{if(!zoomMode)return;e.preventDefault();const r=canvas.getBoundingClientRect(),old=frameZoom,delta=e.deltaY<0?1.15:1/1.15,next=Math.max(1,Math.min(8,old*delta)),localX=(e.clientX-r.left)/old,localY=(e.clientY-r.top)/old,layoutLeft=r.left-frameZoomX,layoutTop=r.top-frameZoomY;frameZoom=next;frameZoomX=e.clientX-layoutLeft-localX*next;frameZoomY=e.clientY-layoutTop-localY*next;applyFrameZoom()},{passive:false});
 function pushUndo(action){undoStack.push(action);if(undoStack.length>8)undoStack.shift()}function snapshot(){pushUndo({type:'draw',data:activeDraw.toDataURL()})}
 function rect(a,b){return{x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(b.x-a.x),h:Math.abs(b.y-a.y)}}
 function shapeEndPoint(a,b,constrain=false){
@@ -197,7 +204,7 @@ canvas.onpointerdown=e=>{
  else if(paste){paste.dragOffset={x:start.x-paste.x,y:start.y-paste.y}}
  else{snapshot();if(['line','rect','ellipse','triangle','polygon'].includes(tool))shapePreviewEnd={...start}}
 };
-canvas.addEventListener('dblclick',e=>{if(tool!=='cursor'||textEditor)return;const p=point(e),hit=textItems.findIndex(o=>textHit(o,p));if(hit>=0)openTextEditor(hit,p.x,p.y)});
+canvas.addEventListener('dblclick',e=>{if(zoomMode||tool!=='cursor'||textEditor)return;const p=point(e),hit=textItems.findIndex(o=>textHit(o,p));if(hit>=0)openTextEditor(hit,p.x,p.y)});
 canvas.addEventListener('click',e=>{
  if(tool!=='text'||!frames.length||e.target!==canvas||textEditor)return;
  const p=point(e);
