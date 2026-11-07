@@ -281,3 +281,8 @@ body.dark-mode .thumb small{color:#fff}
 /* Frame-number badge: black with white text in light mode, inverted in dark mode. */
 .thumb small{background:#111;color:#fff}
 body.dark-mode .thumb small{background:#fff;color:#111}
+
+
+/* Explicit frame index badge colors for both themes. */
+.thumb .thumb-frame-number{background:#111!important;color:#fff!important}
+body.dark-mode .thumb .thumb-frame-number{background:#fff!important;color:#111!important}
