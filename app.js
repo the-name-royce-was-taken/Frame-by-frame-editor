@@ -375,8 +375,9 @@ function getUpscaleWorker(){
   if(!pending){bitmap?.close?.();return}
   if(stage){
    pending.lastStage=stage;
-   const labels={loading:'Loading AI upscaler runtime…',model:'Loading AI super-resolution model (first run can take a little while)…',upscaling:'AI model ready — enhancing frame…'};
-   $('status').textContent=stage==='progress'?'AI enhancing frame… '+Math.round((e.data.progress||0)*100)+'%':(labels[stage]||'AI upscaling…');
+   const frameLabel=`Frame ${pending.frameNumber} / ${pending.totalFrames}`;
+   const labels={loading:`${frameLabel} — loading AI upscaler runtime…`,model:`${frameLabel} — loading AI super-resolution model…`,upscaling:`${frameLabel} — enhancing frame…`};
+   $('status').textContent=stage==='progress'?`${frameLabel} — upscaling ${Math.round((e.data.progress||0)*100)}%`: (labels[stage]||`${frameLabel} — AI upscaling…`);
    return;
   }
   upscalePending.delete(id);clearTimeout(pending.timer);
@@ -389,8 +390,8 @@ function getUpscaleWorker(){
  };
  return upscaleWorker;
 }
-async function aiUpscaleCanvas(source){
- $('status').textContent='Starting AI upscaler…';
+async function aiUpscaleCanvas(source,frameNumber=1,totalFrames=1){
+ $('status').textContent=`Frame ${frameNumber} / ${totalFrames} — starting AI upscaler…`;
  const input=document.createElement('canvas');
  input.width=Math.max(1,Math.round(source.width/2));input.height=Math.max(1,Math.round(source.height/2));
  const inputCtx=input.getContext('2d',{alpha:false});
@@ -399,7 +400,7 @@ async function aiUpscaleCanvas(source){
  const bitmap=await createImageBitmap(input);input.width=1;input.height=1;
  const id=++upscaleRequestId,worker=getUpscaleWorker();
  const result=await new Promise((resolve,reject)=>{
-  const pending={resolve,reject,lastStage:'loading'};
+  const pending={resolve,reject,lastStage:'loading',frameNumber,totalFrames};
   pending.timer=setTimeout(()=>{
    if(!upscalePending.has(id))return;
    upscalePending.delete(id);
@@ -423,10 +424,10 @@ async function aiUpscaleCanvas(source){
  }
  ctx.putImageData(rgba,0,0);return output;
 }
-async function exportFrame(frame,applyAiUpscale=true){const out=document.createElement('canvas');out.width=canvas.width;out.height=canvas.height;const x=out.getContext('2d',{alpha:false});x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.fillStyle='#fff';x.fillRect(0,0,out.width,out.height);const base=await bitmapFromKey(frame.baseKey);if(base){x.drawImage(base,0,0,out.width,out.height);base.close?.()}const draw=await bitmapFromKey(frame.drawKey);if(draw){x.drawImage(draw,0,0,out.width,out.height);draw.close?.()}if(frame.imagesKey){const ib=await FrameStore.get(frame.imagesKey);if(ib){try{const items=JSON.parse(await ib.text());for(const item of items){const blob=await FrameStore.get(item.key);if(blob){const bm=await createImageBitmap(blob);x.save();x.translate(item.x+item.w/2,item.y+item.h/2);x.rotate(item.rotation||0);x.drawImage(bm,-item.w/2,-item.h/2,item.w,item.h);x.restore();bm.close?.()}}}catch{}}}if(frame.textKey){const tb=await FrameStore.get(frame.textKey);if(tb){try{x.save();drawTextItems(x,JSON.parse(await tb.text()));x.restore()}catch{}}}const finalCanvas=applyAiUpscale&&$('upscale-4x')?.checked?await aiUpscaleCanvas(out):out;return new Promise(resolve=>finalCanvas.toBlob(resolve,'image/png'))}
+async function exportFrame(frame,applyAiUpscale=true,frameNumber=1,totalFrames=1){const out=document.createElement('canvas');out.width=canvas.width;out.height=canvas.height;const x=out.getContext('2d',{alpha:false});x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.fillStyle='#fff';x.fillRect(0,0,out.width,out.height);const base=await bitmapFromKey(frame.baseKey);if(base){x.drawImage(base,0,0,out.width,out.height);base.close?.()}const draw=await bitmapFromKey(frame.drawKey);if(draw){x.drawImage(draw,0,0,out.width,out.height);draw.close?.()}if(frame.imagesKey){const ib=await FrameStore.get(frame.imagesKey);if(ib){try{const items=JSON.parse(await ib.text());for(const item of items){const blob=await FrameStore.get(item.key);if(blob){const bm=await createImageBitmap(blob);x.save();x.translate(item.x+item.w/2,item.y+item.h/2);x.rotate(item.rotation||0);x.drawImage(bm,-item.w/2,-item.h/2,item.w,item.h);x.restore();bm.close?.()}}}catch{}}}if(frame.textKey){const tb=await FrameStore.get(frame.textKey);if(tb){try{x.save();drawTextItems(x,JSON.parse(await tb.text()));x.restore()}catch{}}}const finalCanvas=applyAiUpscale&&$('upscale-4x')?.checked?await aiUpscaleCanvas(out,frameNumber,totalFrames):out;return new Promise(resolve=>finalCanvas.toBlob(resolve,'image/png'))}
 function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000)}
 $('export').onclick=async()=>{if(!frames.length)return alert('Add or import frames before exporting.');const fmt=$('format').value;try{
-$('status').textContent='Loading FFmpeg…';const ff=await createFFmpegInstance();for(let i=0;i<frames.length;i++){const blob=await exportFrame(frames[i]);await ff.writeFile('frame'+String(i).padStart(5,'0')+'.png',new Uint8Array(await blob.arrayBuffer()));if(i%8===0)$('status').textContent='Export prep '+(i+1)+' / '+frames.length}
+$('status').textContent='Loading FFmpeg…';const ff=await createFFmpegInstance();for(let i=0;i<frames.length;i++){const blob=await exportFrame(frames[i],true,i+1,frames.length);await ff.writeFile('frame'+String(i).padStart(5,'0')+'.png',new Uint8Array(await blob.arrayBuffer()));if(i%8===0)$('status').textContent='Export prep '+(i+1)+' / '+frames.length}
 const webm=fmt==='webm',mov=['mov','movhevc','mpeg4'].includes(fmt),hevc=['hevc','movhevc'].includes(fmt),codec=webm?'libvpx-vp9':hevc?'libx265':fmt==='mpeg4'?'mpeg4':'libx264',ext=webm?'webm':mov?'mov':'mp4',args=['-framerate',String((1/Math.max(.001,frameDuration)).toFixed(6).replace(/0+$/,'').replace(/\\.$/,'')),'-i','frame%05d.png'],audioInputs=[];
 for(let i=0;i<audioTracks.length;i++){
  const track=audioTracks[i],file=track.file||videoFile;if(!file)continue;
