@@ -102,13 +102,13 @@ function updateAudioTrack(){
  });
  $('audio-track-label').textContent=tracks.length?tracks.length+' audio track'+(tracks.length===1?'':'s')+' · mix together':'Audio tracks';
 }
-function point(e){const r=canvas.getBoundingClientRect(),z=frameZoom;return{x:(e.clientX-r.left)/z*canvas.width/canvas.offsetWidth,y:(e.clientY-r.top)/z*canvas.height/canvas.offsetHeight}}
+function point(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*canvas.width/r.width,y:(e.clientY-r.top)*canvas.height/r.height}}
 function applyFrameZoom(){canvas.style.transform=`translate(${frameZoomX}px,${frameZoomY}px) scale(${frameZoom})`;canvas.style.transformOrigin='0 0';canvas.style.cursor=zoomMode?'zoom-in':(tool==='cursor'?'default':tool==='eraser'?'cell':'crosshair');$('zoom-frame').classList.toggle('active',zoomMode);$('zoom-frame').setAttribute('aria-pressed',String(zoomMode));$('zoom-frame').title=zoomMode?'Zoom mode active — scroll over the canvas to zoom; hold to reset':'Click to enable zoom; hold to reset zoom'}
 function resetFrameZoom(){frameZoom=1;frameZoomX=frameZoomY=0;zoomMode=false;applyFrameZoom();$('status').textContent='Frame zoom reset'}
-$('zoom-frame').addEventListener('click',()=>{if(zoomHoldTriggered){zoomHoldTriggered=false;return}zoomMode=!zoomMode;applyFrameZoom();$('status').textContent=zoomMode?'Zoom mode: scroll over the canvas to zoom':'Zoom mode off'});
+$('zoom-frame').addEventListener('click',()=>{if(zoomHoldTriggered){zoomHoldTriggered=false;return}zoomMode=!zoomMode;applyFrameZoom();$('zoom-frame').classList.toggle('active',zoomMode);$('status').textContent=zoomMode?'Zoom mode: scroll over the canvas to zoom':'Zoom mode off'});
 $('zoom-frame').addEventListener('pointerdown',()=>{zoomHoldTriggered=false;zoomHoldTimer=setTimeout(()=>{zoomHoldTriggered=true;resetFrameZoom()},650)});
 ['pointerup','pointercancel','pointerleave'].forEach(type=>$('zoom-frame').addEventListener(type,()=>clearTimeout(zoomHoldTimer)));
-$('stage').addEventListener('wheel',e=>{if(!zoomMode)return;e.preventDefault();const r=canvas.getBoundingClientRect(),old=frameZoom,delta=e.deltaY<0?1.15:1/1.15,next=Math.max(1,Math.min(8,old*delta)),localX=(e.clientX-r.left)/old,localY=(e.clientY-r.top)/old,layoutLeft=r.left-frameZoomX,layoutTop=r.top-frameZoomY;frameZoom=next;frameZoomX=e.clientX-layoutLeft-localX*next;frameZoomY=e.clientY-layoutTop-localY*next;applyFrameZoom()},{passive:false});
+$('stage').addEventListener('wheel',e=>{if(!zoomMode)return;e.preventDefault();const r=canvas.getBoundingClientRect(),old=frameZoom,next=Math.max(1,Math.min(8,old*(e.deltaY<0?1.2:1/1.2))),px=e.clientX-r.left,py=e.clientY-r.top;frameZoomX+=px*(1-next/old);frameZoomY+=py*(1-next/old);frameZoom=next;applyFrameZoom()},{passive:false});
 function pushUndo(action){undoStack.push(action);if(undoStack.length>8)undoStack.shift()}function snapshot(){pushUndo({type:'draw',data:activeDraw.toDataURL()})}
 function rect(a,b){return{x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(b.x-a.x),h:Math.abs(b.y-a.y)}}
 function shapeEndPoint(a,b,constrain=false){
