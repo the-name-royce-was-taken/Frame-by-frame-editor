@@ -196,3 +196,9 @@ body.dark-mode .theme-toggle:hover{background:#383e35}
 .thumb-delete:disabled{opacity:.3;cursor:not-allowed}
 body.dark-mode .thumb-delete{background:#292f29;border-color:#596052;color:#e0b5a1}
 body.dark-mode .thumb-delete:hover:not(:disabled){background:#49332e;border-color:#d09270;color:#ffd4bf}
+
+
+/* Image object selection and rotate control, matching the text controls. */
+.image-upload-button{width:100%;margin-top:8px}
+.stage .image-rotate-toggle{position:absolute!important;z-index:55;width:18px;height:18px;min-width:0;min-height:0;padding:0;display:grid;place-items:center;border:1px solid #3a0770;border-radius:4px;background:#fff;color:#3a0770;font:700 16px/16px Arial,sans-serif;cursor:pointer;box-shadow:0 1px 3px #0003}
+.stage .image-rotate-toggle[hidden]{display:none!important}
