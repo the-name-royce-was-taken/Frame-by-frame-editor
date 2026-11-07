@@ -118,7 +118,6 @@ function updateToolCursor(){const cursor=tool==='cursor'?'default':tool==='erase
 document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x===b));updateToolCursor();render();}));
 updateToolCursor();
 initTextFontControl();
-$('image-upload-button').onclick=()=>$('image-file').click();
 $('image-file').onchange=async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{if(!frames.length){frames=[blankFrame()];await loadFrame(0)}const bitmap=await createImageBitmap(file);if(!bitmap.width||!bitmap.height)throw Error('This image has no usable dimensions.');const imageKey=key('image');await FrameStore.put(imageKey,file);const item={key:imageKey,x:(canvas.width-bitmap.width)/2,y:(canvas.height-bitmap.height)/2,w:bitmap.width,h:bitmap.height,bitmap};imageItems.push(item);syncFrameImages();imageSelectionIndex=imageItems.length-1;textSelectionIndex=-1;tool='cursor';document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool==='cursor'));updateToolCursor();await render();timeline();$('status').textContent=file.name+' · '+bitmap.width+' × '+bitmap.height+' px';}catch(err){$('status').textContent='Could not load image: '+err.message;alert('Could not load this image: '+err.message)}};
 $('size').oninput=e=>$('size-value').textContent=e.target.value+' px';
 canvas.onpointerdown=e=>{
