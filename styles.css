@@ -211,8 +211,10 @@ body.dark-mode .thumb-delete:hover:not(:disabled){background:#49332e;border-colo
 .shape-fill-control input{accent-color:var(--accent);margin:0}
 
 
-/* Polygon side-count controls in the canvas toolbar. */
-.polygon-sides-control{display:inline-flex;align-items:center;gap:7px;margin-left:10px;margin-right:14px;padding:5px 9px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--text);font-size:11px;white-space:nowrap}
-.polygon-sides-control[hidden]{display:none!important}
+/* Shape fill and polygon side-count controls in the canvas toolbar. */
+.shape-fill-control{display:inline-flex;align-items:center;gap:7px;margin-left:auto;margin-right:10px;padding:5px 9px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--text);font-size:11px;white-space:nowrap;cursor:pointer}
+.shape-fill-control[hidden],.polygon-sides-control[hidden]{display:none!important}
+.shape-fill-control input{accent-color:var(--accent);margin:0}
+.polygon-sides-control{display:inline-flex;align-items:center;gap:7px;margin-right:14px;padding:5px 9px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--text);font-size:11px;white-space:nowrap}
 .polygon-sides-control input[type="range"]{width:92px;accent-color:var(--accent)}
-.polygon-sides-control input[type="number"]{width:43px;padding:3px 4px;border:1px solid var(--line);border-radius:4px;background:var(--surface,var(--panel));color:var(--text);font:inherit}
+.polygon-sides-control input[type="number"]{width:43px;padding:3px 4px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--text);font:inherit}
