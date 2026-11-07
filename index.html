@@ -26,7 +26,7 @@
         <button class="tool" data-tool="line"><span>／</span>Line</button>
         <button class="tool" data-tool="rect"><span>▱</span>Rectangle</button>
         <button class="tool" data-tool="ellipse"><span>◯</span>Ellipse</button>
-        <button class="tool" data-tool="cursor"><span>↖</span>Cursor</button><button class="tool" data-tool="select"><span>⌗</span>Select</button><button class="tool" data-tool="text"><span>T</span>Text</button><button class="tool" id="image-upload-button" type="button"><span>▧</span>Upload image</button><input id="image-file" type="file" accept="image/*" hidden>
+        <button class="tool" data-tool="cursor"><span>↖</span>Cursor</button><button class="tool" data-tool="select"><span>⌗</span>Select</button><button class="tool" data-tool="text"><span>T</span>Text</button><label class="tool image-upload-tool" for="image-file"><span>▧</span>Upload image</label><input id="image-file" class="image-file-input" type="file" accept="image/*">
       </div>
       <div class="control-group"><label for="color">Stroke color</label><div class="color-row"><input id="color" type="color" value="#ff5d78"><span>Custom color</span></div></div>
       <div class="control-group"><div class="label-row"><label for="size">Brush size</label><output id="size-value">5 px</output></div><input id="size" type="range" min="1" max="60" value="5"></div>
