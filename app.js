@@ -131,7 +131,21 @@ $('size').oninput=e=>$('size-value').textContent=e.target.value+' px';
 canvas.onpointerdown=e=>{
  if(!frames.length)return;
  drawing=true;start=last=point(e);
- if(!paste&&tool==='select'&&selection)liftSelectionToFloating();
+ if(!paste&&tool==='select'&&selection){
+  const sel={x:selection.x,y:selection.y,w:selection.w,h:selection.h,rotation:selection.rotation||0};
+  const cx=sel.x+sel.w/2,cy=sel.y+sel.h/2,dx=start.x-cx,dy=start.y-cy,a=-sel.rotation;
+  const lx=dx*Math.cos(a)-dy*Math.sin(a),ly=dx*Math.sin(a)+dy*Math.cos(a);
+  const rotateHit=Math.hypot(lx,ly+sel.h/2+32)<=20;
+  const resizeHit=Math.abs(lx-sel.w/2)<=24&&Math.abs(ly-sel.h/2)<=24;
+  const inside=Math.abs(lx)<=sel.w/2&&Math.abs(ly)<=sel.h/2;
+  if(rotateHit||resizeHit||inside){
+   liftSelectionToFloating();
+   const mode=rotateHit?'rotate':resizeHit?'resize':'move';
+   paste.drag={mode,startX:start.x,startY:start.y,x:paste.x,y:paste.y,w:paste.w,h:paste.h,rotation:paste.rotation||0,startAngle:Math.atan2(dy,dx),startLocalX:lx,startLocalY:ly};
+   canvas.setPointerCapture(e.pointerId);render();return;
+  }
+  commitFloatingSelection();selection={...start,w:0,h:0};canvas.setPointerCapture(e.pointerId);render();return;
+ }
  if(paste){const qx=start.x-(paste.x+paste.w/2),qy=start.y-(paste.y+paste.h/2),a=-(paste.rotation||0),lx=qx*Math.cos(a)-qy*Math.sin(a),ly=qx*Math.sin(a)+qy*Math.cos(a),inside=Math.abs(lx)<=paste.w/2&&Math.abs(ly)<=paste.h/2;if(tool==='select'&&!inside){commitFloatingSelection();selection={...start,w:0,h:0};canvas.setPointerCapture(e.pointerId);render();return}const mode=Math.hypot(lx,ly+paste.h/2+32)<=13?'rotate':(lx>=paste.w/2-18&&ly>=paste.h/2-18?'resize':'move');paste.drag={mode,startX:start.x,startY:start.y,x:paste.x,y:paste.y,w:paste.w,h:paste.h,rotation:paste.rotation||0,startAngle:Math.atan2(qy,qx),startLocalX:lx,startLocalY:ly};canvas.setPointerCapture(e.pointerId);return}
  if(tool==='cursor'){
   const rotateHitIndex=imageItems.findIndex(o=>{const q=imageLocalPoint(o,start);return Math.hypot(q.x,q.y+o.h/2+32)<=13});
@@ -170,7 +184,7 @@ canvas.addEventListener('click',e=>{
 canvas.onpointermove=e=>{
  if(!drawing)return;
  const p=point(e);
- if(paste?.drag){const d=paste.drag,dx=p.x-d.startX,dy=p.y-d.startY;if(d.mode==='move'){paste.x=d.x+dx;paste.y=d.y+dy}else if(d.mode==='rotate'){const cx=paste.x+paste.w/2,cy=paste.y+paste.h/2;paste.rotation=d.rotation+Math.atan2(p.y-cy,p.x-cx)-d.startAngle}else{const qx=p.x-(d.x+d.w/2),qy=p.y-(d.y+d.h/2),a=-(d.rotation),lx=qx*Math.cos(a)-qy*Math.sin(a),ly=qx*Math.sin(a)+qy*Math.cos(a),scale=Math.max(.05,Math.min(20,(lx*d.startLocalX+ly*d.startLocalY)/Math.max(1,d.startLocalX*d.startLocalX+d.startLocalY*d.startLocalY)));paste.w=Math.max(1,d.w*scale);paste.h=Math.max(1,d.h*scale);paste.x=d.x+d.w/2-paste.w/2;paste.y=d.y+d.h/2-paste.h/2}render();return}
+ if(paste?.drag){const d=paste.drag,dx=p.x-d.startX,dy=p.y-d.startY;if(d.mode==='move'){paste.x=d.x+dx;paste.y=d.y+dy}else if(d.mode==='rotate'){const cx=paste.x+paste.w/2,cy=paste.y+paste.h/2;paste.rotation=d.rotation+Math.atan2(p.y-cy,p.x-cx)-d.startAngle}else{const qx=p.x-(d.x+d.w/2),qy=p.y-(d.y+d.h/2),a=-(d.rotation),lx=qx*Math.cos(a)-qy*Math.sin(a),ly=qx*Math.sin(a)+qy*Math.cos(a),scale=Math.max(.05,Math.min(20,(lx*(d.w/2-6)+ly*(d.h/2-6))/Math.max(1,(d.w/2-6)*(d.w/2-6)+(d.h/2-6)*(d.h/2-6))));paste.w=Math.max(1,d.w*scale);paste.h=Math.max(1,d.h*scale);paste.x=d.x+d.w/2-paste.w/2;paste.y=d.y+d.h/2-paste.h/2}render();return}
  if(tool==='cursor'&&imageDrag){const o=imageItems[imageDrag.index],dx=p.x-(imageDrag.x||0),dy=p.y-(imageDrag.y||0);if(imageDrag.mode==='rotate'){const cx=o.x+o.w/2,cy=o.y+o.h/2,angle=Math.atan2(p.y-cy,p.x-cx),delta=angle-imageDrag.startAngle;let rotation=imageDrag.rotation+delta;if(e.shiftKey)rotation=imageDrag.rotation+Math.round(delta/(Math.PI/4))*(Math.PI/4);o.rotation=rotation}else if(imageDrag.mode==='resize'){const local=imageLocalPoint(o,p),sx=imageDrag.startLocalX,sy=imageDrag.startLocalY,den=sx*sx+sy*sy,scale=Math.max(.05,Math.min(20,(local.x*sx+local.y*sy)/Math.max(1,den))),cx=imageDrag.ox+imageDrag.ow/2,cy=imageDrag.oy+imageDrag.oh/2;o.w=Math.max(12,imageDrag.ow*scale);o.h=Math.max(12,imageDrag.oh*scale);o.x=cx-o.w/2;o.y=cy-o.h/2}else{o.x=imageDrag.ox+dx;o.y=imageDrag.oy+dy}render();return}
   if((tool==='text'||tool==='cursor')&&textDrag){const o=textItems[textDrag.index],dx=p.x-(textDrag.x||0),dy=p.y-(textDrag.y||0);if(textDrag.mode==='rotate'){const cx=o.x+o.w/2,cy=o.y+o.h/2,angle=Math.atan2(p.y-cy,p.x-cx),delta=angle-textDrag.startAngle;let rotation=textDrag.rotation+delta;if(e.shiftKey)rotation=textDrag.rotation+Math.round(delta/(Math.PI/4))*(Math.PI/4);o.rotation=rotation}else if(textDrag.mode==='resize'){const local=textLocalPoint(o,p),sx=textDrag.startLocalX,sy=textDrag.startLocalY,scale=Math.max(.05,Math.min(20,(local.x*sx+local.y*sy)/Math.max(1,sx*sx+sy*sy))),cx=textDrag.ox+textDrag.ow/2,cy=textDrag.oy+textDrag.oh/2;o.size=Math.max(8,Math.min(300,textDrag.os*scale));fitTextBounds(o);o.x=cx-o.w/2;o.y=cy-o.h/2}else{o.x=textDrag.ox+dx;o.y=textDrag.oy+dy}render();return}
  if(tool==='select'){if(selectionDrag?.mode==='draw'){selection=rect(start,p)}else if(selectionDrag){const d=selectionDrag,dx=p.x-d.startX,dy=p.y-d.startY;if(d.mode==='move'){selection.x=d.x+dx;selection.y=d.y+dy}else if(d.mode==='rotate'){selection.rotation=d.rotation+Math.atan2(p.y-(d.y+d.h/2),p.x-(d.x+d.w/2))-d.startAngle}else if(d.mode==='resize'){const a=-(d.rotation),qx=p.x-(d.x+d.w/2),qy=p.y-(d.y+d.h/2),lx=qx*Math.cos(a)-qy*Math.sin(a),ly=qx*Math.sin(a)+qy*Math.cos(a),sx=d.w/2-6,sy=d.h/2-6,scale=Math.max(.05,(lx*sx+ly*sy)/Math.max(1,sx*sx+sy*sy));selection.w=Math.max(1,d.w*scale);selection.h=Math.max(1,d.h*scale);selection.x=d.x+d.w/2-selection.w/2;selection.y=d.y+d.h/2-selection.h/2}}render();return}
