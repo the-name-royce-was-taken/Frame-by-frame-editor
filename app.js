@@ -366,47 +366,38 @@ function commitFloatingSelection(){if(!paste)return;dctx().save();dctx().transla
 $('copy').onclick=()=>{if(!selection)return alert('Select an area first');const x=Math.round(selection.x),y=Math.round(selection.y),w=Math.max(1,Math.round(selection.w)),h=Math.max(1,Math.round(selection.h));clipboard=document.createElement('canvas');clipboard.width=w;clipboard.height=h;clipboard.getContext('2d').drawImage(activeDraw,x,y,w,h,0,0,w,h);clipboardPosition={x,y};render()};
 $('paste').onclick=async()=>{if(paste){commitFloatingSelection();await saveActive();$('status').textContent='Selection placed';return}if(!clipboard)return;paste={img:clipboard,x:clipboardPosition?.x??0,y:clipboardPosition?.y??0,w:clipboard.width,h:clipboard.height,rotation:0,drag:null};selection=null;tool='select';document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool==='select'));updateToolCursor();render();$('status').textContent='Selection ready — drag inside to move, the corner to resize, or the top handle to rotate. Press Paste to place it.'};
 function stopPreview(){previewPlaying=false;video.pause();$('play').textContent='▶ Play'}video.addEventListener('ended',stopPreview);$('play').onclick=async()=>{if(previewPlaying){stopPreview();return}const playButton=$('play');playButton.disabled=true;$('status').textContent='Preparing edited playback…';try{await saveActive();$('preview-dialog').showModal();await buildStitchedPreview();video.currentTime=0;previewPlaying=true;playButton.textContent='Ⅱ Pause';try{await video.play();$('status').textContent='Playing stitched edited frames'}catch(playError){previewPlaying=false;playButton.textContent='▶ Play';$('status').textContent='Preview ready — press Play in the video controls to start.'}}catch(err){console.error(err);$('status').textContent='Preview failed: '+err.message;alert('Could not create the edited video preview: '+err.message)}finally{playButton.disabled=false}};$('preview-close').onclick=()=>{stopPreview();$('preview-dialog').close()};$('preview-dialog').addEventListener('click',e=>{if(e.target===$('preview-dialog')){$('preview-close').click()}});$('preview-speed').onchange=e=>{video.playbackRate=Number(e.target.value)};
-let aiUpscalerInstance=null,aiUpscalerPromise=null;
-function loadExternalScript(src){
- return new Promise((resolve,reject)=>{
-  const existing=[...document.scripts].find(s=>s.src===src);
-  if(existing){if(existing.dataset.loaded==='true'){resolve();return}existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',()=>reject(Error('Could not load AI upscaler dependency: '+src)),{once:true});return}
-  const script=document.createElement('script');script.src=src;script.async=true;
-  script.onload=()=>{script.dataset.loaded='true';resolve()};
-  script.onerror=()=>reject(Error('Could not load AI upscaler dependency: '+src));
-  document.head.append(script);
- });
-}
-async function getAIUpscaler(){
- if(aiUpscalerInstance)return aiUpscalerInstance;
- if(!aiUpscalerPromise)aiUpscalerPromise=(async()=>{
-  $('status').textContent='Loading AI upscaler engine…';
-  await loadExternalScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js');
-  await loadExternalScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/tf-backend-wasm.min.js');
-  if(window.tf?.wasm?.setWasmPaths)window.tf.wasm.setWasmPaths('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/');
-  let wasmReady=false;
-  try{wasmReady=await window.tf.setBackend('wasm')}catch(error){console.warn('WASM backend unavailable; using CPU backend',error)}
-  if(!wasmReady)await window.tf.setBackend('cpu');
-  if(window.tf?.ready)await window.tf.ready();
-  await loadExternalScript('https://cdn.jsdelivr.net/npm/@upscalerjs/esrgan-thick@latest/dist/umd/4x.min.js');
-  await loadExternalScript('https://cdn.jsdelivr.net/npm/upscaler@latest/dist/browser/umd/upscaler.min.js');
-  if(!window.Upscaler||!window.ESRGANThick4x)throw Error('The AI super-resolution model did not initialize.');
-  aiUpscalerInstance=new window.Upscaler({model:window.ESRGANThick4x});
-  return aiUpscalerInstance;
- })();
- try{return await aiUpscalerPromise}catch(error){aiUpscalerPromise=null;throw error}
+let upscaleWorker=null,upscaleRequestId=0,upscalePending=new Map();
+function getUpscaleWorker(){
+ if(upscaleWorker)return upscaleWorker;
+ upscaleWorker=new Worker(new URL('upscale-worker.js',location.href));
+ upscaleWorker.onmessage=e=>{
+  const {id,bitmap,error}=e.data||{},pending=upscalePending.get(id);
+  if(!pending){bitmap?.close?.();return}
+  upscalePending.delete(id);
+  if(error)pending.reject(Error(error));else pending.resolve(bitmap);
+ };
+ upscaleWorker.onerror=e=>{
+  const error=Error(e.message||'AI upscaling worker failed');
+  for(const pending of upscalePending.values())pending.reject(error);
+  upscalePending.clear();upscaleWorker?.terminate();upscaleWorker=null;
+ };
+ return upscaleWorker;
 }
 async function aiUpscaleCanvas(source){
- const upscaler=await getAIUpscaler();
- $('status').textContent='AI-enhancing image details…';
- const reduced=document.createElement('canvas');reduced.width=Math.max(1,Math.round(source.width/2));reduced.height=Math.max(1,Math.round(source.height/2));
- const reducedCtx=reduced.getContext('2d',{alpha:false});reducedCtx.imageSmoothingEnabled=true;reducedCtx.imageSmoothingQuality='high';reducedCtx.drawImage(source,0,0,reduced.width,reduced.height);
- const result=await upscaler.upscale(reduced,{patchSize:32,padding:4});
- const image=new Image();image.src=result;await image.decode();
- const output=document.createElement('canvas');output.width=image.naturalWidth;output.height=image.naturalHeight;
- const outCtx=output.getContext('2d',{alpha:false});outCtx.imageSmoothingEnabled=true;outCtx.imageSmoothingQuality='high';outCtx.drawImage(image,0,0);
- if(output.width!==reduced.width*4||output.height!==reduced.height*4)throw Error('AI model returned an unexpected image size.');
- reduced.width=1;reduced.height=1;
+ $('status').textContent='Preparing lightweight AI upscale in background…';
+ const input=document.createElement('canvas');
+ input.width=Math.max(1,Math.round(source.width/2));input.height=Math.max(1,Math.round(source.height/2));
+ const inputCtx=input.getContext('2d',{alpha:false});
+ inputCtx.imageSmoothingEnabled=true;inputCtx.imageSmoothingQuality='high';
+ inputCtx.drawImage(source,0,0,input.width,input.height);
+ const bitmap=await createImageBitmap(input);input.width=1;input.height=1;
+ const id=++upscaleRequestId,worker=getUpscaleWorker();
+ const result=await new Promise((resolve,reject)=>{
+  upscalePending.set(id,{resolve,reject});
+  worker.postMessage({id,bitmap},[bitmap]);
+ });
+ const output=document.createElement('canvas');output.width=result.width;output.height=result.height;
+ const ctx=output.getContext('2d',{alpha:false});ctx.drawImage(result,0,0);result.close?.();
  return output;
 }
 async function exportFrame(frame,applyAiUpscale=true){const out=document.createElement('canvas');out.width=canvas.width;out.height=canvas.height;const x=out.getContext('2d',{alpha:false});x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.fillStyle='#fff';x.fillRect(0,0,out.width,out.height);const base=await bitmapFromKey(frame.baseKey);if(base){x.drawImage(base,0,0,out.width,out.height);base.close?.()}const draw=await bitmapFromKey(frame.drawKey);if(draw){x.drawImage(draw,0,0,out.width,out.height);draw.close?.()}if(frame.imagesKey){const ib=await FrameStore.get(frame.imagesKey);if(ib){try{const items=JSON.parse(await ib.text());for(const item of items){const blob=await FrameStore.get(item.key);if(blob){const bm=await createImageBitmap(blob);x.save();x.translate(item.x+item.w/2,item.y+item.h/2);x.rotate(item.rotation||0);x.drawImage(bm,-item.w/2,-item.h/2,item.w,item.h);x.restore();bm.close?.()}}}catch{}}}if(frame.textKey){const tb=await FrameStore.get(frame.textKey);if(tb){try{x.save();drawTextItems(x,JSON.parse(await tb.text()));x.restore()}catch{}}}const finalCanvas=applyAiUpscale&&$('upscale-4x')?.checked?await aiUpscaleCanvas(out):out;return new Promise(resolve=>finalCanvas.toBlob(resolve,'image/png'))}
