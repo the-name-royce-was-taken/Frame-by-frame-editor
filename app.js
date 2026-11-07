@@ -182,6 +182,8 @@ canvas.onpointerup=async e=>{
 canvas.onpointercancel=async()=>{
  if(!drawing)return;
  drawing=false;shapePreviewEnd=null;
+ if(imageDrag){imageDrag=null;syncFrameImages()}
+ textDrag=null;
  await saveActive();render();
 };
 async function createFFmpegInstance(){
