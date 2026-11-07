@@ -135,13 +135,13 @@ canvas.onpointerdown=e=>{
   const rotateHitIndex=imageItems.findIndex(o=>{const q=imageLocalPoint(o,start);return Math.hypot(q.x,q.y+o.h/2+32)<=13});
   if(rotateHitIndex>=0){const o=imageItems[rotateHitIndex],cx=o.x+o.w/2,cy=o.y+o.h/2;imageSelectionIndex=rotateHitIndex;textSelectionIndex=-1;imageDrag={index:rotateHitIndex,mode:'rotate',rotation:o.rotation||0,startAngle:Math.atan2(start.y-cy,start.x-cx)};textDrag=null;canvas.setPointerCapture(e.pointerId);drawing=true;render();return}
   const imageHitIndex=imageItems.findIndex(o=>imageHit(o,start));
-  if(imageHitIndex>=0){imageSelectionIndex=imageHitIndex;textSelectionIndex=-1;const o=imageItems[imageHitIndex],local=imageLocalPoint(o,start),resizeHit=local.x>=o.w/2-18&&local.y>=o.h/2-18;imageDrag={index:imageHitIndex,mode:resizeHit?'resize':'move',x:start.x,y:start.y,ox:o.x,oy:o.y,ow:o.w,oh:o.h,rotation:o.rotation||0};textDrag=null;canvas.setPointerCapture(e.pointerId);drawing=true;render();return}
+  if(imageHitIndex>=0){imageSelectionIndex=imageHitIndex;textSelectionIndex=-1;const o=imageItems[imageHitIndex],local=imageLocalPoint(o,start),resizeHit=local.x>=o.w/2-18&&local.y>=o.h/2-18;imageDrag={index:imageHitIndex,mode:resizeHit?'resize':'move',x:start.x,y:start.y,ox:o.x,oy:o.y,ow:o.w,oh:o.h,rotation:o.rotation||0,startLocalX:local.x,startLocalY:local.y};textDrag=null;canvas.setPointerCapture(e.pointerId);drawing=true;render();return}
   imageSelectionIndex=-1;
   const rotateTextIndex=textItems.findIndex(o=>{const q=textLocalPoint(o,start);return Math.hypot(q.x,q.y+o.h/2+32)<=13});
    if(rotateTextIndex>=0){const o=textItems[rotateTextIndex],cx=o.x+o.w/2,cy=o.y+o.h/2;textSelectionIndex=rotateTextIndex;textDrag={index:rotateTextIndex,mode:'rotate',rotation:o.rotation||0,startAngle:Math.atan2(start.y-cy,start.x-cx)};canvas.setPointerCapture(e.pointerId);drawing=true;render();return}
    const hit=textItems.findIndex(o=>textHit(o,start));
   textSelectionIndex=hit;
-  if(hit>=0){const o=textItems[hit],resizeHit=start.x>=o.x+o.w-14&&start.y>=o.y+o.h-14;textDrag={index:hit,mode:resizeHit?'resize':'move',x:start.x,y:start.y,ox:o.x,oy:o.y,ow:o.w,oh:o.h,os:o.size};canvas.setPointerCapture(e.pointerId)}
+  if(hit>=0){const o=textItems[hit],local=textLocalPoint(o,start),resizeHit=local.x>=o.w/2-18&&local.y>=o.h/2-18;textDrag={index:hit,mode:resizeHit?'resize':'move',x:start.x,y:start.y,ox:o.x,oy:o.y,ow:o.w,oh:o.h,os:o.size,startLocalX:local.x,startLocalY:local.y};canvas.setPointerCapture(e.pointerId)}
   else textDrag=null;
   drawing=hit>=0;render();return;
  }
@@ -149,8 +149,8 @@ canvas.onpointerdown=e=>{
   const hit=textItems.findIndex(o=>textHit(o,start));
   if(hit<0){drawing=false;return}
   canvas.setPointerCapture(e.pointerId);
-  const o=textItems[hit],resizeHit=start.x>=o.x+o.w-14&&start.y>=o.y+o.h-14;
-  textDrag={index:hit,mode:resizeHit?'resize':'move',x:start.x,y:start.y,ox:o.x,oy:o.y,ow:o.w,oh:o.h,os:o.size};
+  const o=textItems[hit],local=textLocalPoint(o,start),resizeHit=local.x>=o.w/2-18&&local.y>=o.h/2-18;
+  textDrag={index:hit,mode:resizeHit?'resize':'move',x:start.x,y:start.y,ox:o.x,oy:o.y,ow:o.w,oh:o.h,os:o.size,startLocalX:local.x,startLocalY:local.y};
   render();return;
  }
  canvas.setPointerCapture(e.pointerId);
@@ -168,8 +168,8 @@ canvas.addEventListener('click',e=>{
 canvas.onpointermove=e=>{
  if(!drawing)return;
  const p=point(e);
- if(tool==='cursor'&&imageDrag){const o=imageItems[imageDrag.index],dx=p.x-(imageDrag.x||0),dy=p.y-(imageDrag.y||0);if(imageDrag.mode==='rotate'){const cx=o.x+o.w/2,cy=o.y+o.h/2,angle=Math.atan2(p.y-cy,p.x-cx),delta=angle-imageDrag.startAngle;let rotation=imageDrag.rotation+delta;if(e.shiftKey)rotation=imageDrag.rotation+Math.round(delta/(Math.PI/4))*(Math.PI/4);o.rotation=rotation}else if(imageDrag.mode==='resize'){const r=-(imageDrag.rotation||0),lx=dx*Math.cos(r)-dy*Math.sin(r),ly=dx*Math.sin(r)+dy*Math.cos(r),scale=Math.max(.05,Math.min(20,1+Math.max(lx/Math.max(1,imageDrag.ow),ly/Math.max(1,imageDrag.oh))*2));o.w=Math.max(12,imageDrag.ow*scale);o.h=Math.max(12,imageDrag.oh*scale)}else{o.x=imageDrag.ox+dx;o.y=imageDrag.oy+dy}render();return}
-  if((tool==='text'||tool==='cursor')&&textDrag){const o=textItems[textDrag.index],dx=p.x-(textDrag.x||0),dy=p.y-(textDrag.y||0);if(textDrag.mode==='rotate'){const cx=o.x+o.w/2,cy=o.y+o.h/2,angle=Math.atan2(p.y-cy,p.x-cx),delta=angle-textDrag.startAngle;let rotation=textDrag.rotation+delta;if(e.shiftKey)rotation=textDrag.rotation+Math.round(delta/(Math.PI/4))*(Math.PI/4);o.rotation=rotation}else if(textDrag.mode==='resize'){o.size=Math.max(8,Math.min(300,textDrag.os+dx*.35));fitTextBounds(o)}else{o.x=textDrag.ox+dx;o.y=textDrag.oy+dy}render();return}
+ if(tool==='cursor'&&imageDrag){const o=imageItems[imageDrag.index],dx=p.x-(imageDrag.x||0),dy=p.y-(imageDrag.y||0);if(imageDrag.mode==='rotate'){const cx=o.x+o.w/2,cy=o.y+o.h/2,angle=Math.atan2(p.y-cy,p.x-cx),delta=angle-imageDrag.startAngle;let rotation=imageDrag.rotation+delta;if(e.shiftKey)rotation=imageDrag.rotation+Math.round(delta/(Math.PI/4))*(Math.PI/4);o.rotation=rotation}else if(imageDrag.mode==='resize'){const local=imageLocalPoint(o,p),sx=imageDrag.startLocalX,sy=imageDrag.startLocalY,den=sx*sx+sy*sy,scale=Math.max(.05,Math.min(20,(local.x*sx+local.y*sy)/Math.max(1,den))),cx=imageDrag.ox+imageDrag.ow/2,cy=imageDrag.oy+imageDrag.oh/2;o.w=Math.max(12,imageDrag.ow*scale);o.h=Math.max(12,imageDrag.oh*scale);o.x=cx-o.w/2;o.y=cy-o.h/2}else{o.x=imageDrag.ox+dx;o.y=imageDrag.oy+dy}render();return}
+  if((tool==='text'||tool==='cursor')&&textDrag){const o=textItems[textDrag.index],dx=p.x-(textDrag.x||0),dy=p.y-(textDrag.y||0);if(textDrag.mode==='rotate'){const cx=o.x+o.w/2,cy=o.y+o.h/2,angle=Math.atan2(p.y-cy,p.x-cx),delta=angle-textDrag.startAngle;let rotation=textDrag.rotation+delta;if(e.shiftKey)rotation=textDrag.rotation+Math.round(delta/(Math.PI/4))*(Math.PI/4);o.rotation=rotation}else if(textDrag.mode==='resize'){const local=textLocalPoint(o,p),sx=textDrag.startLocalX,sy=textDrag.startLocalY,scale=Math.max(.05,Math.min(20,(local.x*sx+local.y*sy)/Math.max(1,sx*sx+sy*sy))),cx=textDrag.ox+textDrag.ow/2,cy=textDrag.oy+textDrag.oh/2;o.size=Math.max(8,Math.min(300,textDrag.os*scale));fitTextBounds(o);o.x=cx-o.w/2;o.y=cy-o.h/2}else{o.x=textDrag.ox+dx;o.y=textDrag.oy+dy}render();return}
  if(tool==='select'){selection=rect(start,p);render();return}
  if(paste){paste.x=p.x-(paste.dragOffset?.x||0);paste.y=p.y-(paste.dragOffset?.y||0);render();return}
  if(['line','rect','ellipse'].includes(tool)){shapePreviewEnd=p}
