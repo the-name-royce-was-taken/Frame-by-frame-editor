@@ -96,8 +96,8 @@ function shapeEndPoint(a,b,constrain=false){
  const dx=b.x-a.x,dy=b.y-a.y,side=Math.max(Math.abs(dx),Math.abs(dy));
  return{x:a.x+Math.sign(dx||1)*side,y:a.y+Math.sign(dy||1)*side};
 }
-function drawShape(target,startPoint,endPoint){
- const d=target;endPoint=shapeEndPoint(startPoint,endPoint,window.__shapeShiftHeld||false);
+function drawShape(target,startPoint,endPoint,constrain=false){
+ const d=target;endPoint=shapeEndPoint(startPoint,endPoint,constrain);
  d.save();d.lineWidth=+$('size').value;d.strokeStyle=$('color').value;d.fillStyle=$('color').value;d.lineCap='round';d.lineJoin='round';d.globalCompositeOperation='source-over';d.beginPath();
  if(tool==='line'){d.moveTo(startPoint.x,startPoint.y);d.lineTo(endPoint.x,endPoint.y)}
  else if(tool==='rect'){d.rect(startPoint.x,startPoint.y,endPoint.x-startPoint.x,endPoint.y-startPoint.y)}
@@ -210,7 +210,7 @@ canvas.onpointerup=async e=>{
  if(['line','rect','ellipse'].includes(tool)){
   // Commit exactly one final shape to the drawing layer. The live preview
   // was drawn only on the display canvas, never into activeDraw.
-  window.__shapeShiftHeld=e.shiftKey;drawShape(dctx(),start,p);window.__shapeShiftHeld=false;activeDrawDirty=true;shapePreviewEnd=null;
+  drawShape(dctx(),start,p,e.shiftKey);activeDrawDirty=true;shapePreviewEnd=null;
  }
  if(paste){dctx().save();dctx().translate(paste.x+paste.w/2,paste.y+paste.h/2);dctx().rotate(paste.rotation||0);dctx().drawImage(paste.img,-paste.w/2,-paste.h/2,paste.w,paste.h);dctx().restore();activeDrawDirty=true;paste=null}
  if(selection){selection=rect(start,{x:start.x+selection.w,y:start.y+selection.h});const x=Math.round(selection.x),y=Math.round(selection.y),w=Math.max(1,Math.round(selection.w)),h=Math.max(1,Math.round(selection.h));if(w>1&&h>1){const floating=document.createElement('canvas');floating.width=w;floating.height=h;floating.getContext('2d').drawImage(activeDraw,x,y,w,h,0,0,w,h);dctx().clearRect(x,y,w,h);paste={img:floating,x,y,w,h,rotation:0,drag:null};activeDrawDirty=true}selection=null}
