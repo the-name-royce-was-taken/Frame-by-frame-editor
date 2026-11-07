@@ -54,7 +54,7 @@
       <p class="hint" id="info">Import a video to extract frames. MP3 can be used as an audio soundtrack.</p>
       <div class="divider"></div>
       <div class="control-group"><label for="format">Export format</label><select id="format"><option value="mp4">MP4 · H.264 / AVC</option><option value="mov">MOV · H.264</option><option value="hevc">MP4 · H.265 / HEVC</option><option value="movhevc">MOV · HEVC</option><option value="mpeg4">MOV · MPEG-4</option><option value="webm">WebM · Browser native</option></select></div>
-      <div class="control-group upscale-control"><label for="upscale-4x">Image upscale</label><label class="upscale-toggle"><input id="upscale-4x" type="checkbox"><span>4× upscale on export</span></label><small>Outputs four times the canvas width and height using high-quality interpolation. Not AI detail reconstruction.</small></div>
+      <div class="control-group upscale-control"><label for="upscale-4x">Image upscale</label><label class="upscale-toggle"><input id="upscale-4x" type="checkbox"><span>AI 4× detail upscale</span></label><small>Uses an ESRGAN neural network to reconstruct image detail at 4× resolution. Downloads the model on first use; processing can be slow.</small></div>
       <div class="export-note"><strong>Export notes</strong><p>MP4/MOV uses FFmpeg WebAssembly. The encoder is loaded on demand and may take a moment. HEVC depends on browser and codec build support.</p></div>
       <div class="status-line"><span class="status-dot"></span><span id="status">Ready to create</span></div>
       <div class="memory-card"><span class="eyebrow">PERFORMANCE</span><strong>Memory-aware mode</strong><p>Frames are compressed and stored in the browser’s FrameForgeProject/frames folder, then decoded only when needed.</p></div>
