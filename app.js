@@ -50,7 +50,8 @@ function openTextEditor(i,x,y){
 async function finishTextEditor(){if(!textEditor)return;const editor=textEditor,i=textEditorIndex; textEditor=null;textEditorIndex=-1;const value=editor.value.trimEnd();editor.toolbar?.remove();editor.remove();if(i<0)return;if(!value.trim()){textItems.splice(i,1)}else{const o=textItems[i];o.text=value;const tc=ctx;tc.font=`${o.bold?'bold ':''}${o.size}px ${o.font}`;const lines=value.split(/\r?\n/);o.w=Math.max(30,...lines.map(line=>tc.measureText(line).width));o.h=Math.max(o.size,lines.length*o.size*1.2)}await saveTextItems();render();timeline()}
 function cancelTextEditor(){if(!textEditor)return;const i=textEditorIndex;textEditor.toolbar?.remove();textEditor.remove();textEditor=null;textEditorIndex=-1;if(i>=0&&!textItems[i]?.text)textItems.splice(i,1);render()}
 function drawImageItems(target,handles=false){imageItems.forEach((o,i)=>{target.save();target.translate(o.x+o.w/2,o.y+o.h/2);target.rotate(o.rotation||0);target.drawImage(o.bitmap,-o.w/2,-o.h/2,o.w,o.h);if(handles&&i===imageSelectionIndex){target.strokeStyle='#8878ff';target.lineWidth=2;target.setLineDash([5,3]);target.strokeRect(-o.w/2,-o.h/2,o.w,o.h);target.setLineDash([]);target.fillStyle='#fff';target.strokeStyle='#8878ff';target.fillRect(o.w/2-6,o.h/2-6,12,12);target.strokeRect(o.w/2-6,o.h/2-6,12,12)}target.restore()})}
-function imageHit(o,p){const dx=p.x-(o.x+o.w/2),dy=p.y-(o.y+o.h/2),r=-(o.rotation||0),x=dx*Math.cos(r)-dy*Math.sin(r),y=dx*Math.sin(r)+dy*Math.cos(r);return Math.abs(x)<=o.w/2&&Math.abs(y)<=o.h/2}
+function imageLocalPoint(o,p){const dx=p.x-(o.x+o.w/2),dy=p.y-(o.y+o.h/2),r=-(o.rotation||0);return{x:dx*Math.cos(r)-dy*Math.sin(r),y:dx*Math.sin(r)+dy*Math.cos(r)}}
+function imageHit(o,p){const q=imageLocalPoint(o,p);return Math.abs(q.x)<=o.w/2&&Math.abs(q.y)<=o.h/2}
 function updateImageRotateControl(){if(!imageRotateControl)return;const visible=tool==='cursor'&&imageSelectionIndex>=0&&!!imageItems[imageSelectionIndex];imageRotateControl.hidden=!visible;if(!visible)return;const o=imageItems[imageSelectionIndex],cr=canvas.getBoundingClientRect(),sr=$('stage').getBoundingClientRect();imageRotateControl.style.left=(cr.left-sr.left+(o.x+o.w)*cr.width/canvas.width-9)+'px';imageRotateControl.style.top=(cr.top-sr.top+o.y*cr.height/canvas.height-9)+'px'}
 function initImageRotateControl(){imageRotateControl=document.createElement('button');imageRotateControl.type='button';imageRotateControl.className='image-rotate-toggle';imageRotateControl.textContent='↻';imageRotateControl.title='Rotate image 90°';imageRotateControl.setAttribute('aria-label','Rotate image 90 degrees');imageRotateControl.hidden=true;imageRotateControl.addEventListener('pointerdown',e=>e.stopPropagation());imageRotateControl.addEventListener('click',async e=>{e.stopPropagation();const o=imageItems[imageSelectionIndex];if(!o)return;o.rotation=((o.rotation||0)+Math.PI/2)%(Math.PI*2);await saveImageItems();render();timeline()});$('stage').append(imageRotateControl)}
 function dctx(){return activeDraw.getContext('2d');}
@@ -129,7 +130,7 @@ canvas.onpointerdown=e=>{
  drawing=true;start=last=point(e);
  if(tool==='cursor'){
   const imageHitIndex=imageItems.findIndex(o=>imageHit(o,start));
-  if(imageHitIndex>=0){imageSelectionIndex=imageHitIndex;textSelectionIndex=-1;const o=imageItems[imageHitIndex],resizeHit=start.x>=o.x+o.w-18&&start.y>=o.y+o.h-18;imageDrag={index:imageHitIndex,mode:resizeHit?'resize':'move',x:start.x,y:start.y,ox:o.x,oy:o.y,ow:o.w,oh:o.h};textDrag=null;canvas.setPointerCapture(e.pointerId);drawing=true;render();return}
+  if(imageHitIndex>=0){imageSelectionIndex=imageHitIndex;textSelectionIndex=-1;const o=imageItems[imageHitIndex],local=imageLocalPoint(o,start),resizeHit=local.x>=o.w/2-18&&local.y>=o.h/2-18;imageDrag={index:imageHitIndex,mode:resizeHit?'resize':'move',x:start.x,y:start.y,ox:o.x,oy:o.y,ow:o.w,oh:o.h,rotation:o.rotation||0};textDrag=null;canvas.setPointerCapture(e.pointerId);drawing=true;render();return}
   imageSelectionIndex=-1;
   const hit=textItems.findIndex(o=>start.x>=o.x-5&&start.x<=o.x+o.w+5&&start.y>=o.y-5&&start.y<=o.y+o.h+5);
   textSelectionIndex=hit;
@@ -160,7 +161,7 @@ canvas.addEventListener('click',e=>{
 canvas.onpointermove=e=>{
  if(!drawing)return;
  const p=point(e);
- if(tool==='cursor'&&imageDrag){const o=imageItems[imageDrag.index],dx=p.x-imageDrag.x,dy=p.y-imageDrag.y;if(imageDrag.mode==='resize'){const scale=Math.max(.05,Math.min(20,(imageDrag.ow+dx+dy)/Math.max(1,imageDrag.ow)));o.w=Math.max(12,imageDrag.ow*scale);o.h=Math.max(12,imageDrag.oh*scale)}else{o.x=imageDrag.ox+dx;o.y=imageDrag.oy+dy}render();return}
+ if(tool==='cursor'&&imageDrag){const o=imageItems[imageDrag.index],dx=p.x-imageDrag.x,dy=p.y-imageDrag.y;if(imageDrag.mode==='resize'){const r=-(imageDrag.rotation||0),lx=dx*Math.cos(r)-dy*Math.sin(r),ly=dx*Math.sin(r)+dy*Math.cos(r),scale=Math.max(.05,Math.min(20,1+Math.max(lx/Math.max(1,imageDrag.ow),ly/Math.max(1,imageDrag.oh))*2));o.w=Math.max(12,imageDrag.ow*scale);o.h=Math.max(12,imageDrag.oh*scale)}else{o.x=imageDrag.ox+dx;o.y=imageDrag.oy+dy}render();return}
   if((tool==='text'||tool==='cursor')&&textDrag){const o=textItems[textDrag.index],dx=p.x-textDrag.x,dy=p.y-textDrag.y;if(textDrag.mode==='resize'){o.size=Math.max(8,Math.min(300,textDrag.os+dx*.35));fitTextBounds(o)}else{o.x=textDrag.ox+dx;o.y=textDrag.oy+dy}render();return}
  if(tool==='select'){selection=rect(start,p);render();return}
  if(paste){paste.x=p.x-(paste.dragOffset?.x||0);paste.y=p.y-(paste.dragOffset?.y||0);render();return}
@@ -185,6 +186,7 @@ canvas.onpointerup=async e=>{
 canvas.onpointercancel=async()=>{
  if(!drawing)return;
  drawing=false;shapePreviewEnd=null;
+ if(imageDrag){imageDrag=null;await saveImageItems()}
  await saveActive();render();
 };
 async function createFFmpegInstance(){
