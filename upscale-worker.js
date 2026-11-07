@@ -25,7 +25,9 @@ self.onmessage=async event=>{
  if(!bitmap)return;
  let small=null,inputTensor=null,outputTensor=null;
  try{
+  self.postMessage({id,stage:'loading'});
   const upscaler=await loadEngine();
+  self.postMessage({id,stage:'model'});
   small=new OffscreenCanvas(Math.max(1,Math.round(bitmap.width/2)),Math.max(1,Math.round(bitmap.height/2)));
   const ctx=small.getContext('2d',{alpha:false,willReadFrequently:true});
   ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
@@ -35,6 +37,7 @@ self.onmessage=async event=>{
   const rgb=new Int32Array(small.width*small.height*3);
   for(let src=0,dst=0;dst<rgb.length;src+=4,dst+=3){rgb[dst]=pixels[src];rgb[dst+1]=pixels[src+1];rgb[dst+2]=pixels[src+2]}
   inputTensor=tf.tensor3d(rgb,[small.height,small.width,3],'int32');
+  self.postMessage({id,stage:'upscaling'});
   outputTensor=await upscaler.upscale(inputTensor,{output:'tensor',patchSize:32,padding:4});
   const shape=outputTensor.shape.slice(-3),data=await outputTensor.data(),transferable=data.slice().buffer;
   self.postMessage({id,data:transferable,shape},[transferable]);
