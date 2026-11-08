@@ -34,9 +34,10 @@ self.onmessage=async event=>{
   ctx.drawImage(bitmap,0,0,small.width,small.height);
   bitmap.close?.();
   const pixels=ctx.getImageData(0,0,small.width,small.height).data;
-  const rgb=new Int32Array(small.width*small.height*3);
-  for(let src=0,dst=0;dst<rgb.length;src+=4,dst+=3){rgb[dst]=pixels[src];rgb[dst+1]=pixels[src+1];rgb[dst+2]=pixels[src+2]}
-  inputTensor=tf.tensor3d(rgb,[small.height,small.width,3],'int32');
+  const rgb=new Float32Array(small.width*small.height*3);
+  // ESRGAN Thick expects normalized RGB values in the [0, 1] range.
+  for(let src=0,dst=0;dst<rgb.length;src+=4,dst+=3){rgb[dst]=pixels[src]/255;rgb[dst+1]=pixels[src+1]/255;rgb[dst+2]=pixels[src+2]/255}
+  inputTensor=tf.tensor3d(rgb,[small.height,small.width,3],'float32');
   self.postMessage({id,stage:'upscaling'});
   outputTensor=await upscaler.upscale(inputTensor,{
    output:'tensor',patchSize:32,padding:4,
