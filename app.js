@@ -197,10 +197,29 @@ function drawShape(target,startPoint,endPoint,constrain=false){
 }
 function paint(p){const d=dctx();d.lineWidth=+$('size').value;d.strokeStyle=$('color').value;d.lineCap='round';d.lineJoin='round';d.globalCompositeOperation=tool==='eraser'?'destination-out':'source-over';if(tool==='eraser')d.lineWidth*=3;d.beginPath();if(tool==='pen'||tool==='eraser'){d.moveTo(last.x,last.y);d.lineTo(p.x,p.y)}d.stroke();d.globalCompositeOperation='source-over'}
 
-let textClipboard=null;
+let textClipboard=null,imageClipboard=null,objectClipboardType=null;
+async function copySelectedImage(){
+ const item=imageItems[imageSelectionIndex];
+ if(!item){$('status').textContent='Select an image first';return}
+ const blob=item.key?await cachedFrameBlob(item.key):null;
+ if(!blob){$('status').textContent='Could not copy this image';return}
+ imageClipboard={blob,x:item.x,y:item.y,w:item.w,h:item.h,rotation:item.rotation||0,opacity:item.opacity??1};
+ objectClipboardType='image';$('status').textContent='Image copied — paste keeps its original position';
+}
+async function pasteSelectedImage(){
+ if(!imageClipboard){$('status').textContent='Copy an image first';return}
+ const copy=imageClipboard,assetKey=key('image');
+ try{
+  await FrameStore.put(assetKey,copy.blob);ramFrameBlobs.set(assetKey,copy.blob);
+  const bitmap=await createImageBitmap(copy.blob);
+  imageItems.push({key:assetKey,x:copy.x,y:copy.y,w:copy.w,h:copy.h,rotation:copy.rotation,opacity:copy.opacity,bitmap});
+  imageSelectionIndex=imageItems.length-1;textSelectionIndex=-1;tool='cursor';document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool==='cursor'));updateToolCursor();
+  await saveImageItems();render();timeline();$('status').textContent='Image pasted at its original position';
+ }catch(err){await FrameStore.del(assetKey).catch(()=>{});ramFrameBlobs.delete(assetKey);$('status').textContent='Could not paste image: '+err.message}
+}
 async function copySelectedText(cut=false){
  if(textSelectionIndex<0||!textItems[textSelectionIndex]){ $('status').textContent='Select a text object first'; return; }
- textClipboard=JSON.parse(JSON.stringify(textItems[textSelectionIndex]));
+ textClipboard=JSON.parse(JSON.stringify(textItems[textSelectionIndex]));objectClipboardType='text';
  if(cut){textItems.splice(textSelectionIndex,1);textSelectionIndex=-1;await saveTextItems();render();timeline();$('status').textContent='Text cut — paste keeps its original position'}
  else $('status').textContent='Text copied — paste keeps its original position';
 }
@@ -460,9 +479,9 @@ window.addEventListener('keydown',e=>{
  const mod=e.ctrlKey||e.metaKey;
  if(mod&&(e.key.toLowerCase()==='b'||e.key.toLowerCase()==='u')&&tool==='cursor'&&textSelectionIndex>=0&&textItems[textSelectionIndex]){e.preventDefault();const o=textItems[textSelectionIndex];if(e.key.toLowerCase()==='b'){o.bold=!o.bold;fitTextBounds(o)}else o.underline=!o.underline;saveTextItems().then(()=>{render();timeline()});return}
  if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();$('undo').click();return}
- if(mod&&e.key.toLowerCase()==='c'){e.preventDefault();if(tool==='cursor'&&textSelectionIndex>=0)copySelectedText(false);else $('copy').click();return}
+ if(mod&&e.key.toLowerCase()==='c'){if(tool==='cursor'&&imageSelectionIndex>=0){e.preventDefault();copySelectedImage();return}if(tool==='cursor'&&textSelectionIndex>=0){e.preventDefault();copySelectedText(false);return}e.preventDefault();$('copy').click();return}
  if(mod&&e.key.toLowerCase()==='x'){if(tool==='cursor'&&textSelectionIndex>=0){e.preventDefault();copySelectedText(true)}return}
- if(mod&&e.key.toLowerCase()==='v'){e.preventDefault();if(tool==='cursor'||textClipboard)pasteSelectedText();else $('paste').click();return}
+ if(mod&&e.key.toLowerCase()==='v'){if(objectClipboardType==='image'&&imageClipboard){e.preventDefault();pasteSelectedImage();return}if(objectClipboardType==='text'&&textClipboard){e.preventDefault();pasteSelectedText();return}e.preventDefault();$('paste').click();return}
  if(e.key==='Delete'||e.key==='Backspace'){if(tool==='select'&&(paste||selection)){e.preventDefault();if(paste){paste=null}else{const x=Math.round(selection.x),y=Math.round(selection.y),w=Math.max(0,Math.round(selection.w)),h=Math.max(0,Math.round(selection.h));if(w&&h){dctx().clearRect(x,y,w,h);activeDrawDirty=true}selection=null}saveActive().then(()=>{render();timeline()});return}if(tool==='cursor'&&imageSelectionIndex>=0){e.preventDefault();deleteSelectedImage();return}if(tool==='cursor'&&textSelectionIndex>=0){e.preventDefault();deleteSelectedText();return}}
  if(e.key==='ArrowLeft')loadFrame(index-1);if(e.key==='ArrowRight')loadFrame(index+1)
 });
