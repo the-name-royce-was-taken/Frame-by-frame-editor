@@ -262,6 +262,7 @@ async function createFFmpegInstance(){
  });
  return ff;
 }
+async function exportFrame(frame){const out=document.createElement('canvas');out.width=canvas.width;out.height=canvas.height;const x=out.getContext('2d',{alpha:false});x.fillStyle='#fff';x.fillRect(0,0,out.width,out.height);const base=await bitmapFromKey(frame.baseKey);if(base){x.drawImage(base,0,0,out.width,out.height);base.close?.()}const draw=await bitmapFromKey(frame.drawKey);if(draw){x.drawImage(draw,0,0);draw.close?.()}if(frame.imagesKey){const ib=await FrameStore.get(frame.imagesKey);if(ib){try{const items=JSON.parse(await ib.text());for(const item of items){const blob=await FrameStore.get(item.key);if(blob){const bm=await createImageBitmap(blob);x.save();x.translate(item.x+item.w/2,item.y+item.h/2);x.rotate(item.rotation||0);x.drawImage(bm,-item.w/2,-item.h/2,item.w,item.h);x.restore();bm.close?.()}}}catch{}}}if(frame.textKey){const tb=await FrameStore.get(frame.textKey);if(tb){try{drawTextItems(x,JSON.parse(await tb.text()))}catch{} }}return new Promise(resolve=>out.toBlob(resolve,'image/png'))}
 async function buildStitchedPreview(){
  if(!frames.length)throw Error('There are no frames to play.');
  $('status').textContent='Preparing edited frames for playback…';
