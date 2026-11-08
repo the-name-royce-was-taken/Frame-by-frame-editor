@@ -1,41 +1,43 @@
 # Praxilume Studio
 
-Praxilume is a browser-based frame-by-frame editor for making animations and editing video one image at a time. Bring in a clip, work on individual frames, add drawings or text, arrange a soundtrack, then export the result.
+Praxilume is a frame-by-frame drawing and video editor that runs in your browser. Bring in a clip, work on the frames one at a time, add drawings, text or images, then put everything together with a soundtrack.
 
-It is made to open in a browser, so there is no account or server to configure. Your working project data stays in the browser on the device you are using.
+There’s no installer or account to set up. Open the editor in a modern browser and you’re ready to go.
 
 ## Open Praxilume
 
 [Launch Praxilume Studio](https://the-name-royce-was-taken.github.io/Praxilume/)
 
-To run it locally, serve the project folder with a simple static web server and open the page in a modern browser. Some features rely on browser media and storage APIs, and video export loads FFmpeg WebAssembly when needed.
+If you want to work on the code, run the repository through a simple static web server and open it locally.
 
 ## What you can do
 
-- Import a video and work through its frames on the timeline.
-- Add, duplicate and remove frames.
+- Import a video and step through its frames.
+- Add, duplicate and delete frames as you work.
 - Draw with the pen, eraser, line and shape tools.
-- Place text and images on a frame, then move and edit them.
-- Select part of a drawing and copy it to another frame.
-- Add separate audio tracks and move them along the timeline.
-- Preview the edited sequence and export a video.
+- Place text and images on the canvas and adjust their position or size.
+- Copy a selected part of a drawing and paste it onto another frame.
+- Add audio on its own timeline track, move it into place and trim its length.
+- Preview your edits and export the finished video.
 
-The formats you can import and export depend on the browser and the codecs available on your device.
+Available video and audio formats depend on the browser and the codecs supported by your device.
 
-## A couple of practical notes
+## Working with larger videos
 
-Praxilume keeps frame data compressed in browser storage and loads it as you work. This helps avoid keeping every full-size frame in memory at once, but large or long videos can still take time and use a fair amount of memory.
+A long clip can contain a lot of image data. Praxilume compresses frames and stores them locally in your browser, using the Origin Private File System when it is available and IndexedDB as a fallback. Frames are loaded as needed instead of keeping every full-size image in memory.
 
-The first export may be slower because the video encoder has to load. Your working frames are stored locally in the browser; they are not yet packaged as a portable project file. Export your finished video before clearing site data or moving to another browser or device.
+Video encoding is handled by FFmpeg WebAssembly. The first preview or export can take a little longer while it loads.
 
-## Working on the project
+## Project files
 
-The main files are:
+- `index.html` holds the editor interface.
+- `styles.css` controls the layout and appearance.
+- `app.js` handles editing, audio, playback and export.
+- `frame-store.js` manages frame data in browser storage.
+- `ffmpeg-worker.js` supports the video encoder.
 
-- `index.html` — the editor interface
-- `styles.css` — layout and appearance
-- `app.js` — drawing, timeline, audio, media and export behaviour
-- `frame-store.js` — browser storage for frame data
-- `ffmpeg-worker.js` — the video-encoding worker
+## A few things to keep in mind
 
-Praxilume is still being developed, so some edges may be a little rough. If something behaves differently across browsers, media support and codec availability are good places to start checking.
+Praxilume is a work in progress. Browser support for video formats and export codecs varies, and longer or higher-resolution projects may take a while to import or export.
+
+Your working frames are saved in the browser on the device you’re using. They are not currently packaged into a portable project file, so export your finished video before clearing browser data or switching devices.
