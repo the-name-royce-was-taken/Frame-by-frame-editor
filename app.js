@@ -401,7 +401,7 @@ window.addEventListener('keydown',e=>{
  if(mod&&e.key.toLowerCase()==='c'){e.preventDefault();if(tool==='cursor'&&textSelectionIndex>=0)copySelectedText(false);else $('copy').click();return}
  if(mod&&e.key.toLowerCase()==='x'){if(tool==='cursor'&&textSelectionIndex>=0){e.preventDefault();copySelectedText(true)}return}
  if(mod&&e.key.toLowerCase()==='v'){e.preventDefault();if(tool==='cursor'||textClipboard)pasteSelectedText();else $('paste').click();return}
- if(e.key==='Delete'||e.key==='Backspace'){if(tool==='cursor'&&imageSelectionIndex>=0){e.preventDefault();deleteSelectedImage();return}if(tool==='cursor'&&textSelectionIndex>=0){e.preventDefault();deleteSelectedText()}return}
+ if(e.key==='Delete'||e.key==='Backspace'){if(tool==='select'&&(paste||selection)){e.preventDefault();if(paste){paste=null}else{const x=Math.round(selection.x),y=Math.round(selection.y),w=Math.max(0,Math.round(selection.w)),h=Math.max(0,Math.round(selection.h));if(w&&h){dctx().clearRect(x,y,w,h);activeDrawDirty=true}selection=null}saveActive().then(()=>{render();timeline()});return}if(tool==='cursor'&&imageSelectionIndex>=0){e.preventDefault();deleteSelectedImage();return}if(tool==='cursor'&&textSelectionIndex>=0){e.preventDefault();deleteSelectedText();return}}
  if(e.key==='ArrowLeft')loadFrame(index-1);if(e.key==='ArrowRight')loadFrame(index+1)
 });
 const themeToggle=$('theme-toggle');
