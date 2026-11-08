@@ -13,7 +13,7 @@
   <header class="topbar">
     <a class="brand" href="#" aria-label="Praxilume home"><img class="brand-mark" src="icon.png" alt=""><span>Praxilume <small>STUDIO</small></span></a>
     <div class="top-actions">
-      <span class="project-status"><i></i> Local project</span>
+      <span class="project-status"><i></i> Project workspace</span>
       <button class="button button-secondary" id="open">Import media</button>
       <input id="file" type="file" accept="video/*" hidden><input id="audio-file" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac" hidden>
       <button class="button button-primary" id="export"><span>Export video</span><span aria-hidden="true">↗</span></button>
@@ -42,7 +42,7 @@
     </aside>
     <section class="editor">
       <div class="workspace-toolbar"><div><span class="eyebrow">CANVAS</span><strong id="canvas-label">1280 × 720</strong></div><label class="shape-fill-control" id="shape-fill-control" hidden><input id="shape-fill" type="checkbox"><span>Fill shape</span></label><label class="polygon-sides-control" id="polygon-sides-control" hidden><span>Sides</span><input id="polygon-sides" type="range" min="5" max="30" value="6"><input id="polygon-sides-number" type="number" min="5" max="30" value="6" aria-label="Polygon sides"></label><span class="zoom-label">Fit to workspace</span></div>
-      <div class="stage" id="stage"><canvas id="c" width="1280" height="720"></canvas><div class="empty-state" id="empty-state"><div class="empty-icon">✦</div><h2>Your canvas is ready</h2><p>Import a video or start drawing on a blank frame.</p><button class="button button-primary" id="empty-import">Import video</button></div></div>
+      <div class="stage" id="stage"><canvas id="c" width="1280" height="720"></canvas><div class="empty-state" id="empty-state"><div class="empty-icon">✦</div><h2>Ready when you are</h2><p>Bring in a clip, or start with a blank frame.</p><button class="button button-primary" id="empty-import">Import video</button></div></div>
       <div class="transport">
         <div class="transport-buttons"><button id="prev" title="Previous frame">◀</button><button id="play" class="play-button">▶ Play</button><button id="next" title="Next frame">▶</button></div>
         <div class="frame-readout"><span id="count">Frame 1 / 1</span><input id="scrub" type="range" min="0" max="0" value="0"></div>
@@ -52,13 +52,13 @@
     </section>
     <aside class="panel media-panel">
       <div class="panel-heading"><div><span class="eyebrow">PROJECT</span><h2>Media & export</h2></div></div>
-      <div class="media-preview"><audio id="aud" controls hidden></audio><div id="media-placeholder"><div class="media-icon">▧</div><strong>No media loaded</strong><span>MP4, MOV or MP3</span></div></div>
-      <p class="hint" id="info">Import a video to extract frames. MP3 can be used as an audio soundtrack.</p>
+      <div class="media-preview"><audio id="aud" controls hidden></audio><div id="media-placeholder"><div class="media-icon">▧</div><strong>Nothing imported yet</strong><span>MP4, MOV or MP3</span></div></div>
+      <p class="hint" id="info">Bring in a video to work frame by frame, or add an audio file as a soundtrack.</p>
       <div class="divider"></div>
       <div class="control-group"><label for="format">Export format</label><select id="format"><option value="mp4">MP4 · H.264 / AVC</option><option value="mov">MOV · H.264</option><option value="hevc">MP4 · H.265 / HEVC</option><option value="movhevc">MOV · HEVC</option><option value="mpeg4">MOV · MPEG-4</option><option value="webm">WebM · Browser native</option></select></div>
       <div class="export-note"><strong>Export notes</strong><p>MP4/MOV uses FFmpeg WebAssembly. The encoder is loaded on demand and may take a moment. HEVC depends on browser and codec build support.</p></div>
       <div class="status-line"><span class="status-dot"></span><span id="status">Ready to create</span></div>
-      <div class="memory-card"><span class="eyebrow">PERFORMANCE</span><strong>Memory-aware mode</strong><p>Frames are compressed and stored in the browser’s existing local project storage, then decoded only when needed.</p></div>
+      <div class="memory-card"><span class="eyebrow">PERFORMANCE</span><strong>Designed to stay responsive</strong><p>Frames are kept compact in your browser and opened as you work, helping larger projects stay manageable.</p></div>
     </aside>
   </main>
   
