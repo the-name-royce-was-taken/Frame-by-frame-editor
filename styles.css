@@ -301,7 +301,7 @@ body.dark-mode .thumb .thumb-frame-number{background:#fff!important;color:#111!i
 .theme-toggle{box-shadow:0 1px 4px #30291b12}
 body.dark-mode :focus-visible{outline-color:#d09270}
 body.dark-mode .panel-heading{border-bottom-color:#3b4039}
-body.dark-mode .panel,.body.dark-mode .editor{box-shadow:0 1px 3px #0002}
+body.dark-mode .panel,body.dark-mode .editor{box-shadow:0 1px 3px #0002}
 body.dark-mode .button-primary{background:#ad6244}
 body.dark-mode .button-primary:hover{background:#bd7050}
 body.dark-mode .button-secondary{background:#30352e}
