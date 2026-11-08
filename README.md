@@ -1,4 +1,4 @@
-# FrameForge Studio
+# Praxilume Studio
 
 A static, browser-based frame-by-frame drawing and video editor.
 
