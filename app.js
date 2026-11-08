@@ -369,7 +369,7 @@ function stopPreview(){previewPlaying=false;video.pause();$('play').textContent=
 let upscaleWorker=null,upscaleRequestId=0,upscalePending=new Map();
 function getUpscaleWorker(){
  if(upscaleWorker)return upscaleWorker;
- upscaleWorker=new Worker(new URL('upscale-worker.js?v=20261108-normalized-input',location.href));
+ upscaleWorker=new Worker(new URL('upscale-worker.js?v=20261108-full-resolution-tiles',location.href));
  upscaleWorker.onmessage=e=>{
   const {id,bitmap,data,shape,error,stage}=e.data||{},pending=upscalePending.get(id);
   if(!pending){bitmap?.close?.();return}
@@ -393,7 +393,7 @@ function getUpscaleWorker(){
 async function aiUpscaleCanvas(source,frameNumber=1,totalFrames=1){
  $('status').textContent=`Frame ${frameNumber} / ${totalFrames} — starting AI upscaler…`;
  const input=document.createElement('canvas');
- input.width=Math.max(1,Math.round(source.width/2));input.height=Math.max(1,Math.round(source.height/2));
+ input.width=source.width;input.height=source.height;
  const inputCtx=input.getContext('2d',{alpha:false});
  inputCtx.imageSmoothingEnabled=true;inputCtx.imageSmoothingQuality='high';
  inputCtx.drawImage(source,0,0,input.width,input.height);
