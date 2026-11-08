@@ -280,3 +280,31 @@ body.dark-mode .thumb small{background:#fff;color:#111}
 /* Explicit frame index badge colors for both themes. */
 .thumb .thumb-frame-number{background:#111!important;color:#fff!important}
 body.dark-mode .thumb .thumb-frame-number{background:#fff!important;color:#111!important}
+
+
+/* Small finishing touches: calm, consistent and practical rather than overly glossy. */
+:focus-visible{outline:2px solid #ad5b3d;outline-offset:2px}
+.button:active,.tool:active,.transport-buttons button:active{transform:translateY(1px)}
+.panel,.editor{box-shadow:0 1px 3px #30291b0a}
+.panel-heading{padding-bottom:11px;border-bottom:1px solid #e4e0d7}
+.panel h2{font-weight:650}
+.tool{min-height:39px}
+.button,.tool,select,.transport-buttons button{transition:background-color .14s ease,border-color .14s ease,color .14s ease,box-shadow .14s ease}
+.button-primary{background:#a9573b}
+.button-primary:hover{background:#954a32}
+.button-secondary{background:#f0eee8}
+.button-secondary:hover{background:#e7e3da}
+.stage{border-color:#cbc6ba}
+.media-preview{border-style:solid}
+.export-note{background:#f3f1eb}
+.memory-card{background:#eeefe7}
+.theme-toggle{box-shadow:0 1px 4px #30291b12}
+body.dark-mode :focus-visible{outline-color:#d09270}
+body.dark-mode .panel-heading{border-bottom-color:#3b4039}
+body.dark-mode .panel,.body.dark-mode .editor{box-shadow:0 1px 3px #0002}
+body.dark-mode .button-primary{background:#ad6244}
+body.dark-mode .button-primary:hover{background:#bd7050}
+body.dark-mode .button-secondary{background:#30352e}
+body.dark-mode .button-secondary:hover{background:#3a4037}
+body.dark-mode .export-note{background:#2b2f2a}
+body.dark-mode .memory-card{background:#2c332b}
