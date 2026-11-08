@@ -366,68 +366,9 @@ function commitFloatingSelection(){if(!paste)return;dctx().save();dctx().transla
 $('copy').onclick=()=>{if(!selection)return alert('Select an area first');const x=Math.round(selection.x),y=Math.round(selection.y),w=Math.max(1,Math.round(selection.w)),h=Math.max(1,Math.round(selection.h));clipboard=document.createElement('canvas');clipboard.width=w;clipboard.height=h;clipboard.getContext('2d').drawImage(activeDraw,x,y,w,h,0,0,w,h);clipboardPosition={x,y};render()};
 $('paste').onclick=async()=>{if(paste){commitFloatingSelection();await saveActive();$('status').textContent='Selection placed';return}if(!clipboard)return;paste={img:clipboard,x:clipboardPosition?.x??0,y:clipboardPosition?.y??0,w:clipboard.width,h:clipboard.height,rotation:0,drag:null};selection=null;tool='select';document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool==='select'));updateToolCursor();render();$('status').textContent='Selection ready — drag inside to move, the corner to resize, or the top handle to rotate. Press Paste to place it.'};
 function stopPreview(){previewPlaying=false;video.pause();$('play').textContent='▶ Play'}video.addEventListener('ended',stopPreview);$('play').onclick=async()=>{if(previewPlaying){stopPreview();return}const playButton=$('play');playButton.disabled=true;$('status').textContent='Preparing edited playback…';try{await saveActive();$('preview-dialog').showModal();await buildStitchedPreview();video.currentTime=0;previewPlaying=true;playButton.textContent='Ⅱ Pause';try{await video.play();$('status').textContent='Playing stitched edited frames'}catch(playError){previewPlaying=false;playButton.textContent='▶ Play';$('status').textContent='Preview ready — press Play in the video controls to start.'}}catch(err){console.error(err);$('status').textContent='Preview failed: '+err.message;alert('Could not create the edited video preview: '+err.message)}finally{playButton.disabled=false}};$('preview-close').onclick=()=>{stopPreview();$('preview-dialog').close()};$('preview-dialog').addEventListener('click',e=>{if(e.target===$('preview-dialog')){$('preview-close').click()}});$('preview-speed').onchange=e=>{video.playbackRate=Number(e.target.value)};
-let upscaleWorker=null,upscaleRequestId=0,upscalePending=new Map();
-function getUpscaleWorker(){
- if(upscaleWorker)return upscaleWorker;
- upscaleWorker=new Worker(new URL('upscale-worker.js?v=20261108-full-resolution-tiles',location.href));
- upscaleWorker.onmessage=e=>{
-  const {id,bitmap,data,shape,error,stage}=e.data||{},pending=upscalePending.get(id);
-  if(!pending){bitmap?.close?.();return}
-  if(stage){
-   pending.lastStage=stage;
-   const frameLabel=`Frame ${pending.frameNumber} / ${pending.totalFrames}`;
-   const labels={loading:`${frameLabel} — loading AI upscaler runtime…`,model:`${frameLabel} — loading AI super-resolution model…`,upscaling:`${frameLabel} — enhancing frame…`};
-   $('status').textContent=stage==='progress'?`${frameLabel} — upscaling ${Math.round((e.data.progress||0)*100)}%`: (labels[stage]||`${frameLabel} — AI upscaling…`);
-   return;
-  }
-  upscalePending.delete(id);clearTimeout(pending.timer);
-  if(error)pending.reject(Error(error));else if(data&&shape)pending.resolve({data:new Float32Array(data),shape});else pending.reject(Error('AI upscaler returned no image data.'));
- };
- upscaleWorker.onerror=e=>{
-  const error=Error(e.message||'AI upscaling worker failed');
-  for(const pending of upscalePending.values()){clearTimeout(pending.timer);pending.reject(error)}
-  upscalePending.clear();upscaleWorker?.terminate();upscaleWorker=null;
- };
- return upscaleWorker;
-}
-async function aiUpscaleCanvas(source,frameNumber=1,totalFrames=1){
- $('status').textContent=`Frame ${frameNumber} / ${totalFrames} — starting AI upscaler…`;
- const input=document.createElement('canvas');
- input.width=source.width;input.height=source.height;
- const inputCtx=input.getContext('2d',{alpha:false});
- inputCtx.imageSmoothingEnabled=true;inputCtx.imageSmoothingQuality='high';
- inputCtx.drawImage(source,0,0,input.width,input.height);
- const bitmap=await createImageBitmap(input);input.width=1;input.height=1;
- const id=++upscaleRequestId,worker=getUpscaleWorker();
- const result=await new Promise((resolve,reject)=>{
-  const pending={resolve,reject,lastStage:'loading',frameNumber,totalFrames};
-  pending.timer=setTimeout(()=>{
-   if(!upscalePending.has(id))return;
-   upscalePending.delete(id);
-   reject(Error('AI upscaler did not respond within 3 minutes. Check your connection and reload the editor before trying again.'));
-   for(const item of upscalePending.values())item.reject(Error('AI upscaler timed out.'));
-   upscalePending.clear();upscaleWorker?.terminate();upscaleWorker=null;
-  },180000);
-  upscalePending.set(id,pending);
-  try{worker.postMessage({id,bitmap},[bitmap])}catch(error){clearTimeout(pending.timer);upscalePending.delete(id);reject(error)}
- });
- const [height,width,channels]=result.shape;
- if(!height||!width||channels<3)throw Error('AI upscaler returned an invalid image shape.');
- const output=document.createElement('canvas');output.width=width;output.height=height;
- const ctx=output.getContext('2d',{alpha:false});
- const rgba=ctx.createImageData(width,height),pixels=result.data;
- for(let src=0,dst=0;src<height*width*channels;src+=channels,dst+=4){
-  const scale=pixels instanceof Float32Array||pixels instanceof Float64Array?255:1;
-  rgba.data[dst]=Math.max(0,Math.min(255,Math.round(pixels[src]*scale)));
-  rgba.data[dst+1]=Math.max(0,Math.min(255,Math.round(pixels[src+1]*scale)));
-  rgba.data[dst+2]=Math.max(0,Math.min(255,Math.round(pixels[src+2]*scale)));rgba.data[dst+3]=255;
- }
- ctx.putImageData(rgba,0,0);return output;
-}
-async function exportFrame(frame,applyAiUpscale=true,frameNumber=1,totalFrames=1){const out=document.createElement('canvas');out.width=canvas.width;out.height=canvas.height;const x=out.getContext('2d',{alpha:false});x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.fillStyle='#fff';x.fillRect(0,0,out.width,out.height);const base=await bitmapFromKey(frame.baseKey);if(base){x.drawImage(base,0,0,out.width,out.height);base.close?.()}const draw=await bitmapFromKey(frame.drawKey);if(draw){x.drawImage(draw,0,0,out.width,out.height);draw.close?.()}if(frame.imagesKey){const ib=await FrameStore.get(frame.imagesKey);if(ib){try{const items=JSON.parse(await ib.text());for(const item of items){const blob=await FrameStore.get(item.key);if(blob){const bm=await createImageBitmap(blob);x.save();x.translate(item.x+item.w/2,item.y+item.h/2);x.rotate(item.rotation||0);x.drawImage(bm,-item.w/2,-item.h/2,item.w,item.h);x.restore();bm.close?.()}}}catch{}}}if(frame.textKey){const tb=await FrameStore.get(frame.textKey);if(tb){try{x.save();drawTextItems(x,JSON.parse(await tb.text()));x.restore()}catch{}}}const finalCanvas=applyAiUpscale&&$('upscale-4x')?.checked?await aiUpscaleCanvas(out,frameNumber,totalFrames):out;return new Promise(resolve=>finalCanvas.toBlob(resolve,'image/png'))}
 function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000)}
 $('export').onclick=async()=>{if(!frames.length)return alert('Add or import frames before exporting.');const fmt=$('format').value;try{
-$('status').textContent='Loading FFmpeg…';const ff=await createFFmpegInstance();for(let i=0;i<frames.length;i++){const blob=await exportFrame(frames[i],true,i+1,frames.length);await ff.writeFile('frame'+String(i).padStart(5,'0')+'.png',new Uint8Array(await blob.arrayBuffer()));if(i%8===0)$('status').textContent='Export prep '+(i+1)+' / '+frames.length}
+$('status').textContent='Loading FFmpeg…';const ff=await createFFmpegInstance();for(let i=0;i<frames.length;i++){const blob=await exportFrame(frames[i]);await ff.writeFile('frame'+String(i).padStart(5,'0')+'.png',new Uint8Array(await blob.arrayBuffer()));if(i%8===0)$('status').textContent='Export prep '+(i+1)+' / '+frames.length}
 const webm=fmt==='webm',mov=['mov','movhevc','mpeg4'].includes(fmt),hevc=['hevc','movhevc'].includes(fmt),codec=webm?'libvpx-vp9':hevc?'libx265':fmt==='mpeg4'?'mpeg4':'libx264',ext=webm?'webm':mov?'mov':'mp4',args=['-framerate',String((1/Math.max(.001,frameDuration)).toFixed(6).replace(/0+$/,'').replace(/\\.$/,'')),'-i','frame%05d.png'],audioInputs=[];
 for(let i=0;i<audioTracks.length;i++){
  const track=audioTracks[i],file=track.file||videoFile;if(!file)continue;
