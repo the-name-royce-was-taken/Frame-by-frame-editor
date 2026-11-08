@@ -1,38 +1,42 @@
 # Praxilume Studio
 
-A static, browser-based frame-by-frame drawing and video editor.
+Praxilume is a frame-by-frame drawing and video editor that runs right in your browser. You can bring in a clip, work on it one frame at a time, add drawings, text or images, and put the edited sequence back together with a soundtrack.
 
-## Run it
+It’s designed to be straightforward to open and use: no account, installer or server-side setup is needed.
 
-Open [the GitHub Pages site](https://the-name-royce-was-taken.github.io/Frame-by-frame-editor/) after enabling Pages in **Settings → Pages**, or serve this repository with any static web server. No backend is required.
+## Open Praxilume
 
-## Project layout
+When GitHub Pages is enabled for this repository, you can use the editor here:
 
-- `index.html` — semantic app structure and UI
-- `styles.css` — responsive dark studio theme
-- `app.js` — frame editing, import, playback and export logic
+[Open Praxilume Studio](https://the-name-royce-was-taken.github.io/Praxilume/)
 
-## Memory-conscious design
+For local development, serve the repository with any static web server and open the page in a modern browser.
 
-- Video import captures every decoded source frame instead of sampling at a selected FPS.
-- Frames are compressed as WebP and stored individually in the browser's Origin Private File System in the existing local project folder (kept unchanged to preserve existing projects), with IndexedDB fallback.
-- The active frame and visible timeline thumbnails are decoded only when needed.
-- The original video stays attached to the preview so source audio plays in sync with frame playback.
-- FFmpeg is loaded only when a non-WebM export is requested.
+## What’s inside
 
-## Features
+- **Frame-by-frame editing:** import a video, step through its frames, add new ones and preview your changes.
+- **Drawing tools:** sketch with the pen and eraser, or use lines, shapes and text.
+- **Images and selections:** add images, move and resize elements, and copy or paste selected areas between frames.
+- **Soundtrack timeline:** add an audio file on its own track and move it along the timeline.
+- **Video export:** assemble your edited frames and audio into a finished file. Available formats include MP4, MOV and WebM, with codec support depending on the browser and encoder build.
+- **Light and dark themes:** switch the workspace appearance to suit how you like to work.
 
-- Import video (MOV/MP4 supported by the browser) and audio files
-- Native-frame extraction, audio-synced playback, frame stepping and blank-frame insertion
-- Pen, eraser, line, rectangle, ellipse and selection tools
-- Copy/paste selected drawing regions between frames
-- WebM export with browser MediaRecorder
-- MP4/MOV export through FFmpeg WebAssembly, including H.264, HEVC and MPEG-4 options
+## Keeping larger projects manageable
 
-## Known limitations
+A frame sequence can get big quickly. Praxilume compresses frame data and stores it locally in your browser, using the Origin Private File System where supported and IndexedDB as a fallback. It decodes frames as they are needed for editing and previewing, rather than holding every full-size frame in memory all the time.
 
-- Video import relies on browser media decoding and supported input formats vary by browser.
-- The import cap is 900 frames. A longer clip is truncated rather than silently allocating unlimited memory.
-- HEVC availability depends on the FFmpeg build and the browser/device.
-- WebM export currently captures the canvas; imported audio is only muxed in the FFmpeg export path.
-- This is a browser prototype, not a professional NLE. Save/export work before closing the tab; project persistence is not implemented.
+Video encoding is handled with FFmpeg WebAssembly. It is loaded when you start an export or build an edited preview, so the first run may take a little longer.
+
+## Project files
+
+- `index.html` contains the editor interface.
+- `styles.css` controls the layout and appearance.
+- `app.js` handles editing, media import, playback and export.
+- `frame-store.js` manages compressed frame data in browser storage.
+- `ffmpeg-worker.js` provides the worker used by FFmpeg.
+
+## A few limitations
+
+Praxilume is still a work in progress. The video and audio formats you can import depend on your browser, and not every device supports every export codec. Large or long videos may take a while to import and export.
+
+Your working frame data is stored in the browser on the device you’re using. It is not currently a portable project file, so export your finished work before clearing browser data or switching devices.
