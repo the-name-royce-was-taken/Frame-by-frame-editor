@@ -399,10 +399,18 @@ window.addEventListener('keydown',e=>{
  if(e.key==='ArrowLeft')loadFrame(index-1);if(e.key==='ArrowRight')loadFrame(index+1)
 });
 const themeToggle=$('theme-toggle');
+function applyTheme(dark){
+ document.body.classList.toggle('dark-mode',dark);
+ if(themeToggle){
+  themeToggle.innerHTML='<span aria-hidden="true">'+(dark?'☾':'☼')+'</span>';
+  themeToggle.setAttribute('aria-label',dark?'Switch to light mode':'Switch to dark mode');
+  themeToggle.title=dark?'Switch to light mode':'Switch to dark mode';
+ }
+}
+try{applyTheme(localStorage.getItem('frameforge-theme')==='dark')}catch{applyTheme(false)}
 if(themeToggle)themeToggle.addEventListener('click',()=>{
- const dark=document.body.classList.toggle('dark-mode');
- themeToggle.innerHTML='<span aria-hidden="true">'+(dark?'☾':'☼')+'</span>';
- themeToggle.setAttribute('aria-label',dark?'Switch to light mode':'Switch to dark mode');
- themeToggle.title=dark?'Switch to light mode':'Switch to dark mode';
+ const dark=!document.body.classList.contains('dark-mode');
+ applyTheme(dark);
+ try{localStorage.setItem('frameforge-theme',dark?'dark':'light')}catch{}
 });
 frames=[blankFrame(0)];loadFrame(0);
