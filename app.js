@@ -369,7 +369,7 @@ function stopPreview(){previewPlaying=false;video.pause();$('play').textContent=
 let upscaleWorker=null,upscaleRequestId=0,upscalePending=new Map();
 function getUpscaleWorker(){
  if(upscaleWorker)return upscaleWorker;
- upscaleWorker=new Worker(new URL('upscale-worker.js?v=20261108-tensor-output',location.href));
+ upscaleWorker=new Worker(new URL('upscale-worker.js?v=20261108-normalized-input',location.href));
  upscaleWorker.onmessage=e=>{
   const {id,bitmap,data,shape,error,stage}=e.data||{},pending=upscalePending.get(id);
   if(!pending){bitmap?.close?.();return}
