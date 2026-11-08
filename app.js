@@ -407,10 +407,12 @@ function applyTheme(dark){
   themeToggle.title=dark?'Switch to light mode':'Switch to dark mode';
  }
 }
-try{applyTheme(localStorage.getItem('frameforge-theme')==='dark')}catch{applyTheme(false)}
+let savedTheme='0';
+try{savedTheme=localStorage.getItem('frameforge-theme')??'0'}catch{}
+applyTheme(savedTheme==='1');
 if(themeToggle)themeToggle.addEventListener('click',()=>{
  const dark=!document.body.classList.contains('dark-mode');
  applyTheme(dark);
- try{localStorage.setItem('frameforge-theme',dark?'dark':'light')}catch{}
+ try{localStorage.setItem('frameforge-theme',dark?'1':'0')}catch{}
 });
 frames=[blankFrame(0)];loadFrame(0);
