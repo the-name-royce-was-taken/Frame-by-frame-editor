@@ -370,3 +370,9 @@ body.dark-mode .export-note p,body.dark-mode .memory-card p{color:#a0a497}
 body.dark-mode .memory-card{background:#292e28;border-color:#454b42}
 body.dark-mode :where(button,input,select,textarea):focus-visible{outline-color:#d09270}
 @media(max-width:760px){.topbar{height:64px}.app-shell{padding:10px;gap:10px}.panel{padding:15px}}
+
+/* Audio timeline clip resizing handle */
+.audio-track-resize{position:absolute;right:0;top:0;bottom:0;width:14px;padding:0;border:0;border-left:1px solid #9fc7b7;border-radius:0 3px 3px 0;background:#1d5148;color:#eafff8;font:700 12px/1 Arial,sans-serif;cursor:ew-resize;touch-action:none;user-select:none;z-index:3}
+.audio-track-resize:hover{background:#327d6b}
+.audio-track-clip{padding-right:17px!important}
+body.dark-mode .audio-track-resize{background:#1d5148;color:#eafff8;border-left-color:#9fc7b7}
