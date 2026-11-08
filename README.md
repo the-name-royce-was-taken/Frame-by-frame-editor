@@ -1,38 +1,47 @@
 # FrameForge Studio
 
-A static, browser-based frame-by-frame drawing and video editor.
+FrameForge is a small frame-by-frame animation and video editor that runs in your browser. It’s built for drawing over video, working through a sequence one frame at a time, and putting the finished result back together.
 
-## Run it
+There’s no account or backend to set up. Open the page, import some media, and get started.
 
-Open [the GitHub Pages site](https://the-name-royce-was-taken.github.io/Frame-by-frame-editor/) after enabling Pages in **Settings → Pages**, or serve this repository with any static web server. No backend is required.
+## Open the editor
 
-## Project layout
+Once GitHub Pages is enabled for this repository, the editor is available at:
 
-- `index.html` — semantic app structure and UI
-- `styles.css` — responsive dark studio theme
-- `app.js` — frame editing, import, playback and export logic
+[Open FrameForge Studio](https://the-name-royce-was-taken.github.io/Praxilume/)
 
-## Memory-conscious design
+You can also run it locally with any simple static web server. The project uses browser APIs and loads FFmpeg WebAssembly when it needs to encode a video.
 
-- Video import captures every decoded source frame instead of sampling at a selected FPS.
-- Frames are compressed as WebP and stored individually in the browser's Origin Private File System at `FrameForgeProject/frames`, with IndexedDB fallback.
-- The active frame and visible timeline thumbnails are decoded only when needed.
-- The original video stays attached to the preview so source audio plays in sync with frame playback.
-- FFmpeg is loaded only when a non-WebM export is requested.
+## What you can do
 
-## Features
+- Import a video and work with its frames individually.
+- Add blank frames, move through the timeline, and preview your sequence.
+- Draw with the pen, eraser, line and shape tools.
+- Add and work with text and images on the canvas.
+- Select, copy and paste parts of a drawing between frames.
+- Add a separate soundtrack and line it up on the audio track.
+- Export a finished video in supported formats, including MP4, MOV and WebM.
 
-- Import video (MOV/MP4 supported by the browser) and audio files
-- Native-frame extraction, audio-synced playback, frame stepping and blank-frame insertion
-- Pen, eraser, line, rectangle, ellipse and selection tools
-- Copy/paste selected drawing regions between frames
-- WebM export with browser MediaRecorder
-- MP4/MOV export through FFmpeg WebAssembly, including H.264, HEVC and MPEG-4 options
+Supported video and audio formats depend on the browser and the codecs available on the device.
 
-## Known limitations
+## A note on performance
 
-- Video import relies on browser media decoding and supported input formats vary by browser.
-- The import cap is 900 frames. A longer clip is truncated rather than silently allocating unlimited memory.
-- HEVC availability depends on the FFmpeg build and the browser/device.
-- WebM export currently captures the canvas; imported audio is only muxed in the FFmpeg export path.
-- This is a browser prototype, not a professional NLE. Save/export work before closing the tab; project persistence is not implemented.
+Video editing can use a lot of memory, especially when a clip contains hundreds of frames. To keep things manageable, frames are compressed and stored individually in the browser using the Origin Private File System where available, with IndexedDB as a fallback. The editor loads frame data as it is needed rather than keeping every decoded frame in memory.
+
+The first export can take a little while because the video encoder has to load.
+
+## Project files
+
+The main files are:
+
+- `index.html` — the editor interface
+- `styles.css` — layout and visual styling
+- `app.js` — drawing, timeline, media and export behaviour
+- `frame-store.js` — local storage for compressed frame data
+- `ffmpeg-worker.js` — worker used by the video encoder
+
+## Things to keep in mind
+
+This is an actively developed browser project, so a few rough edges are to be expected. Import support varies between browsers, and some export codecs may not be available on every device. Very long or high-resolution videos can also take time and use significant storage.
+
+The frame cache lives in the browser, not in a portable project file. Export your finished video before clearing browser site data or moving to another browser or device.
