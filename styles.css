@@ -308,3 +308,65 @@ body.dark-mode .button-secondary{background:#30352e}
 body.dark-mode .button-secondary:hover{background:#3a4037}
 body.dark-mode .export-note{background:#2b2f2a}
 body.dark-mode .memory-card{background:#2c332b}
+
+
+/* Praxilume finishing pass: quieter surfaces, clearer hierarchy, familiar colours. */
+:root{--radius:12px}
+body{font-family:Inter,"DM Sans",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.005em}
+.topbar{height:68px;padding-inline:clamp(16px,2.2vw,30px);border-bottom-color:#ded9cf;background:#f7f5f0}
+.brand{gap:11px;letter-spacing:-.55px}
+.brand small{letter-spacing:1.7px}
+.app-shell{gap:14px;padding:16px;min-height:calc(100vh - 68px)}
+.panel,.editor{box-shadow:0 3px 14px #30291b0a}
+.panel{padding:17px}
+.panel-heading{margin-bottom:17px}
+.eyebrow{letter-spacing:1.55px;font-size:9px}
+.panel h2{font-size:19px;letter-spacing:-.55px}
+.tool{min-height:39px;border-radius:8px;transition:background .15s ease,border-color .15s ease,color .15s ease}
+.tool:hover{border-color:#bdb5a8;background:#f0ede6;color:#574f45}
+.tool.active{border-color:#ad5b3d;background:#f4e8e1;color:#713e2e;box-shadow:inset 3px 0 #ad5b3d}
+.tool.active span{color:#ad5b3d}
+.button{border-radius:8px;transition:background .15s ease,border-color .15s ease,box-shadow .15s ease,transform .15s ease}
+.button:hover{transform:translateY(-1px);filter:none}
+.button-secondary{background:#f1eee8;border-color:#d8d2c7;color:#514b43}
+.button-secondary:hover{background:#e9e4da;border-color:#c7bfb2}
+.button-primary{background:#ad5b3d;box-shadow:0 3px 10px #ad5b3d22}
+.button-primary:hover{background:#9d4e33}
+.control-group label{color:#615c53}
+.hint{color:#77736b;line-height:1.65}
+.divider{background:#e3dfd6;margin:19px 0}
+.editor{padding:14px;gap:11px}
+.workspace-toolbar{min-height:27px}
+.stage{border-color:#d5d0c6;border-radius:8px}
+.transport-buttons button{border-color:#d5cfc4;background:#f1eee8;color:#554f46;border-radius:7px}
+.transport-buttons .play-button{background:#ad5b3d;border-color:#ad5b3d;color:#fff}
+.timeline-wrap{border-color:#e1ddd4}
+.thumb{border-color:#cfc9be;border-radius:6px}
+.thumb.active{border-color:#ad5b3d;box-shadow:0 0 0 2px #ad5b3d20}
+.media-preview{border-color:#d5cfc4;background:#f5f2ec}
+#media-placeholder{color:#77736b}
+#media-placeholder strong{color:#4d4942}
+.export-note{background:#f3f0e9;border-color:#ded8cc;border-radius:8px}
+.export-note p{color:#77736b}
+.memory-card{background:#f2eee7;border-color:#ded5c8;border-radius:8px}
+.memory-card p{color:#77736b}
+:where(button,input,select,textarea):focus-visible{outline:2px solid #ad5b3d;outline-offset:2px}
+body.dark-mode .topbar{background:#20231f;border-color:#383d36}
+body.dark-mode .panel,body.dark-mode .editor{box-shadow:0 3px 16px #0002}
+body.dark-mode .tool:hover{background:#30352f;border-color:#62675b;color:#f0eee7}
+body.dark-mode .button-secondary{background:#2d322d;border-color:#454b42;color:#e5e4dc}
+body.dark-mode .button-secondary:hover{background:#373d36;border-color:#62695e}
+body.dark-mode .button-primary{background:#b86a4d;border-color:#b86a4d}
+body.dark-mode .button-primary:hover{background:#c47a5b}
+body.dark-mode .control-group label{color:#c2c2b7}
+body.dark-mode .divider,body.dark-mode .timeline-wrap{background:#3b4039;border-color:#3b4039}
+body.dark-mode .transport-buttons button{background:#2d322d;border-color:#454b42;color:#e5e4dc}
+body.dark-mode .transport-buttons .play-button{background:#b86a4d;border-color:#b86a4d;color:#fff}
+body.dark-mode .media-preview{background:#1d211d;border-color:#454b42}
+body.dark-mode #media-placeholder{color:#a0a497}
+body.dark-mode #media-placeholder strong{color:#e8e8df}
+body.dark-mode .export-note{background:#292e28;border-color:#454b42}
+body.dark-mode .export-note p,body.dark-mode .memory-card p{color:#a0a497}
+body.dark-mode .memory-card{background:#292e28;border-color:#454b42}
+body.dark-mode :where(button,input,select,textarea):focus-visible{outline-color:#d09270}
+@media(max-width:760px){.topbar{height:64px}.app-shell{padding:10px;gap:10px}.panel{padding:15px}}
