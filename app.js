@@ -282,11 +282,11 @@ async function buildStitchedPreview(){
   const track=audioTracks[i],file=track.file||videoFile;if(!file)continue;
   const ext=(file.name.split('.').pop()||'mp3').toLowerCase(),filename='preview-audio-'+i+'.'+ext;
   await ff.writeFile(filename,new Uint8Array(await file.arrayBuffer()));
-  args.push('-i',filename);audioInputs.push({input:i+1,offset:Math.round(track.offsetFrame*frameDuration*1000)});
+  args.push('-i',filename);audioInputs.push({input:i+1,trackId:track.id,offset:Math.round(track.offsetFrame*frameDuration*1000)});
  }
  args.push('-map','0:v:0');
  if(audioInputs.length){
-  const filters=audioInputs.map((item,i)=>'['+item.input+':a:0]adelay='+item.offset+'|'+item.offset+'[a'+i+']');
+  const filters=audioInputs.map((item,i)=>{const track=audioTracks.find(t=>t.id===item.trackId);return '['+item.input+':a:0]atrim=duration='+Math.max(.001,track?.duration||0)+',asetpts=PTS-STARTPTS,adelay='+item.offset+'|'+item.offset+'[a'+i+']'});
   filters.push(audioInputs.map((_,i)=>'[a'+i+']').join('')+'amix=inputs='+audioInputs.length+':duration=longest:dropout_transition=0[aout]');
   args.push('-filter_complex',filters.join(';'),'-map','[aout]');
  }
@@ -376,11 +376,11 @@ for(let i=0;i<audioTracks.length;i++){
  const track=audioTracks[i],file=track.file||videoFile;if(!file)continue;
  const audioExt=(file.name.split('.').pop()||'mp3').toLowerCase(),filename='audio-track-'+i+'.'+audioExt;
  await ff.writeFile(filename,new Uint8Array(await file.arrayBuffer()));args.push('-i',filename);
- audioInputs.push({input:i+1,offset:Math.round(track.offsetFrame*frameDuration*1000)});
+ audioInputs.push({input:i+1,trackId:track.id,offset:Math.round(track.offsetFrame*frameDuration*1000)});
 }
 args.push('-map','0:v:0');
 if(audioInputs.length){
- const filters=audioInputs.map((item,i)=>'['+item.input+':a:0]adelay='+item.offset+'|'+item.offset+'[a'+i+']');
+ const filters=audioInputs.map((item,i)=>{const track=audioTracks.find(t=>t.id===item.trackId);return '['+item.input+':a:0]atrim=duration='+Math.max(.001,track?.duration||0)+',asetpts=PTS-STARTPTS,adelay='+item.offset+'|'+item.offset+'[a'+i+']'});
  filters.push(audioInputs.map((_,i)=>'[a'+i+']').join('')+'amix=inputs='+audioInputs.length+':duration=longest:dropout_transition=0[aout]');
  args.push('-filter_complex',filters.join(';'),'-map','[aout]');
 }
