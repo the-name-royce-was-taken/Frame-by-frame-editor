@@ -376,3 +376,10 @@ body.dark-mode :where(button,input,select,textarea):focus-visible{outline-color:
 .audio-track-resize:hover{background:#327d6b}
 .audio-track-clip{padding-right:17px!important}
 body.dark-mode .audio-track-resize{background:#1d5148;color:#eafff8;border-left-color:#9fc7b7}
+
+/* Selected text/image opacity control beside canvas dimensions */
+.opacity-control{display:flex;align-items:center;gap:8px;padding:5px 9px;border:1px solid var(--line,#d8d4ca);border-radius:8px;background:var(--panel,#fff);font-size:12px;white-space:nowrap}
+.opacity-control input{width:92px;accent-color:var(--accent,#8878ff)}
+.opacity-control output{min-width:34px;text-align:right;font-variant-numeric:tabular-nums}
+.opacity-control[hidden]{display:none}
+@media(max-width:600px){.opacity-control{gap:5px;padding:4px 6px}.opacity-control input{width:64px}}
