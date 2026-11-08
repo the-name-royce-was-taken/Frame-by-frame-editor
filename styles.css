@@ -383,3 +383,7 @@ body.dark-mode .audio-track-resize{background:#1d5148;color:#eafff8;border-left-
 .opacity-control output{min-width:34px;text-align:right;font-variant-numeric:tabular-nums}
 .opacity-control[hidden]{display:none}
 @media(max-width:600px){.opacity-control{gap:5px;padding:4px 6px}.opacity-control input{width:64px}}
+
+.audio-track-resize-left{left:0;right:auto;border-left:0;border-right:1px solid #9fc7b7;border-radius:3px 0 0 3px}
+.audio-track-clip{padding-left:17px!important;padding-right:17px!important}
+body.dark-mode .audio-track-resize-left{border-right-color:#9fc7b7}
