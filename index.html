@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#e9e6df">
-  <title>FrameForge — Animation Studio</title>
+  <title>Praxilume — Animation Studio</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="#" aria-label="FrameForge home"><span class="brand-mark">F</span><span>FrameForge <small>STUDIO</small></span></a>
+    <a class="brand" href="#" aria-label="Praxilume home"><span class="brand-mark">F</span><span>Praxilume <small>STUDIO</small></span></a>
     <div class="top-actions">
       <span class="project-status"><i></i> Local project</span>
       <button class="button button-secondary" id="open">Import media</button>
@@ -56,7 +56,7 @@
       <div class="control-group"><label for="format">Export format</label><select id="format"><option value="mp4">MP4 · H.264 / AVC</option><option value="mov">MOV · H.264</option><option value="hevc">MP4 · H.265 / HEVC</option><option value="movhevc">MOV · HEVC</option><option value="mpeg4">MOV · MPEG-4</option><option value="webm">WebM · Browser native</option></select></div>
       <div class="export-note"><strong>Export notes</strong><p>MP4/MOV uses FFmpeg WebAssembly. The encoder is loaded on demand and may take a moment. HEVC depends on browser and codec build support.</p></div>
       <div class="status-line"><span class="status-dot"></span><span id="status">Ready to create</span></div>
-      <div class="memory-card"><span class="eyebrow">PERFORMANCE</span><strong>Memory-aware mode</strong><p>Frames are compressed and stored in the browser’s FrameForgeProject/frames folder, then decoded only when needed.</p></div>
+      <div class="memory-card"><span class="eyebrow">PERFORMANCE</span><strong>Memory-aware mode</strong><p>Frames are compressed and stored in the browser’s existing local project storage, then decoded only when needed.</p></div>
     </aside>
   </main>
   
