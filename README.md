@@ -15,7 +15,7 @@ Open [the GitHub Pages site](https://the-name-royce-was-taken.github.io/Frame-by
 ## Memory-conscious design
 
 - Video import captures every decoded source frame instead of sampling at a selected FPS.
-- Frames are compressed as WebP and stored individually in the browser's Origin Private File System at `FrameForgeProject/frames`, with IndexedDB fallback.
+- Frames are compressed as WebP and stored individually in the browser's Origin Private File System in the existing local project folder (kept unchanged to preserve existing projects), with IndexedDB fallback.
 - The active frame and visible timeline thumbnails are decoded only when needed.
 - The original video stays attached to the preview so source audio plays in sync with frame playback.
 - FFmpeg is loaded only when a non-WebM export is requested.
