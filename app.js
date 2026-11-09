@@ -157,7 +157,7 @@ function drawPerspectiveImage(target,bitmap,w,h,px=0,py=0){
   drawTriangleImage(mesh,bitmap,s00,s10,s11,d00,d10,d11);
   drawTriangleImage(mesh,bitmap,s00,s11,s01,d00,d11,d01);
  }
- target.drawImage(off,-w/2,-h/2,w,h);
+ target.drawImage(off,-off.width/(2*scale),-off.height/(2*scale),off.width/scale,off.height/scale);
 }
 function drawImageItems(target,handles=false){imageItems.forEach((o,i)=>{target.save();target.translate(o.x+o.w/2,o.y+o.h/2);target.rotate(o.rotation||0);target.globalAlpha*=o.opacity??1;drawPerspectiveImage(target,o.bitmap,o.w,o.h,o.perspectiveX||0,o.perspectiveY||0);if(handles&&i===imageSelectionIndex){const px=Math.max(-.45,Math.min(.45,Number(o.perspectiveX)||0)),py=Math.max(-.45,Math.min(.45,Number(o.perspectiveY)||0)),corners=[[-o.w/2*(1+py),-o.h/2*(1+px)],[o.w/2*(1+py),-o.h/2*(1-px)],[o.w/2*(1-py),o.h/2*(1-px)],[-o.w/2*(1-py),o.h/2*(1+px)]];target.strokeStyle='#8878ff';target.lineWidth=2;target.setLineDash([5,3]);target.beginPath();target.moveTo(corners[0][0],corners[0][1]);corners.slice(1).forEach(p=>target.lineTo(p[0],p[1]));target.closePath();target.stroke();target.setLineDash([]);target.fillStyle='#fff';target.strokeStyle='#8878ff';target.fillRect(o.w/2-6,o.h/2-6,12,12);target.strokeRect(o.w/2-6,o.h/2-6,12,12);target.beginPath();target.moveTo(0,-o.h/2);target.lineTo(0,-o.h/2-25);target.stroke();target.beginPath();target.arc(0,-o.h/2-32,8,0,Math.PI*2);target.fillStyle='#fff';target.fill();target.strokeStyle='#8878ff';target.stroke()}target.restore()})}
 function imageLocalPoint(o,p){const dx=p.x-(o.x+o.w/2),dy=p.y-(o.y+o.h/2),r=-(o.rotation||0);return{x:dx*Math.cos(r)-dy*Math.sin(r),y:dx*Math.sin(r)+dy*Math.cos(r)}}
