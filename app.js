@@ -21,13 +21,14 @@ function updateOpacityControl(){
  const text=tool==='cursor'&&textSelectionIndex>=0&&textItems[textSelectionIndex];
  const image=tool==='cursor'&&imageSelectionIndex>=0&&imageItems[imageSelectionIndex];
  const item=text||image;
+ const pc=$('perspective-control'),px=$('image-perspective-x'),py=$('image-perspective-y');
+ if(pc)pc.hidden=!image;
  control.hidden=!item;
  if(!item)return;
  label.textContent=text?'Text opacity':'Image opacity';
  const percent=Math.round((item.opacity??1)*100);
  slider.value=String(percent);value.textContent=percent+'%';
- const pc=$('perspective-control'),px=$('image-perspective-x'),py=$('image-perspective-y');
- if(pc){pc.hidden=!image;if(image){const xv=Math.max(-.45,Math.min(.45,Number(image.perspectiveX)||0)),yv=Math.max(-.45,Math.min(.45,Number(image.perspectiveY)||0));px.value=xv.toFixed(3);py.value=yv.toFixed(3);$('perspective-x-value').value=xv.toFixed(3);$('perspective-y-value').value=yv.toFixed(3)}}
+ if(pc&&image){const xv=Math.max(-.45,Math.min(.45,Number(image.perspectiveX)||0)),yv=Math.max(-.45,Math.min(.45,Number(image.perspectiveY)||0));px.value=xv.toFixed(3);py.value=yv.toFixed(3);$('perspective-x-value').value=xv.toFixed(3);$('perspective-y-value').value=yv.toFixed(3)}
 }
 function bindPerspectiveControl(sliderId,inputId,axis){
  const slider=$(sliderId),input=$(inputId);
