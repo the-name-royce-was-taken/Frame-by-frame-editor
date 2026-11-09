@@ -107,30 +107,14 @@ function drawTriangleImage(target,bitmap,s1,s2,s3,d1,d2,d3){
 function drawPerspectiveImage(target,bitmap,w,h,px=0,py=0){
  if(!px&&!py){target.drawImage(bitmap,-w/2,-h/2,w,h);return}
  const x=Math.max(-.45,Math.min(.45,Number(px)||0)),y=Math.max(-.45,Math.min(.45,Number(py)||0));
- // Bilinear corner displacement: each slider changes one taper axis only.
- // X: move the left edge outward/inward and the right edge oppositely.
- // Y: move the top edge outward/inward and the bottom edge oppositely.
- const dx=x*w,dy=y*h;
- const p00={x:-w/2-dx,y:-h/2-dy},p10={x:w/2+dx,y:-h/2-dy},
-       p11={x:w/2+dx,y:h/2+dy},p01={x:-w/2-dx,y:h/2+dy};
- // Separate X and Y perspective with edge offsets rather than scaling
- // the corner coordinates multiplicatively (which caused compound warping).
- const q00={x:-w/2-dx,y:-h/2+dy},q10={x:w/2-dx,y:-h/2-dy},
-       q11={x:w/2+dx,y:h/2-dy},q01={x:-w/2+dx,y:h/2+dy};
- const topY=-h/2-y*h/2,bottomY=h/2+y*h/2;
- const leftX=-w/2-x*w/2,rightX=w/2+x*w/2;
+ // Each axis is independent. Y changes the width of the top/bottom edges;
+ // X changes the height of the left/right edges. No compound scaling.
  const dst=[
-  {x:leftX,y:topY},
-  {x:rightX,y:topY},
-  {x:rightX,y:bottomY},
-  {x:leftX,y:bottomY}
+  {x:-w/2*(1+y),y:-h/2*(1+x)},
+  {x: w/2*(1+y),y:-h/2*(1-x)},
+  {x: w/2*(1-y),y: h/2*(1-x)},
+  {x:-w/2*(1-y),y: h/2*(1+x)}
  ];
- // For perspective sliders, corners taper as a trapezoid:
- // positive Y = top wider, bottom narrower; positive X = left wider, right narrower.
- dst[0].x=-w/2*(1+x); dst[3].x=-w/2*(1+x);
- dst[1].x=w/2*(1-x); dst[2].x=w/2*(1-x);
- dst[0].y=-h/2*(1-y); dst[1].y=-h/2*(1-y);
- dst[2].y=h/2*(1+y); dst[3].y=h/2*(1+y);
  const src=[{x:0,y:0},{x:bitmap.width,y:0},{x:bitmap.width,y:bitmap.height},{x:0,y:bitmap.height}];
  drawTriangleImage(target,bitmap,src[0],src[1],src[2],dst[0],dst[1],dst[2]);
  drawTriangleImage(target,bitmap,src[0],src[2],src[3],dst[0],dst[2],dst[3]);
