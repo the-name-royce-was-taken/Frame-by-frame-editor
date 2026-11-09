@@ -145,8 +145,10 @@ function drawPerspectiveImage(target,bitmap,w,h,px=0,py=0){
  }
  const [a,b,c,d,e,f,g,k]=rows.map(r=>r[8]);
  const map=(u,v)=>{const z=g*u+k*v+1;if(!Number.isFinite(z)||Math.abs(z)<1e-8)return null;return{x:(a*u+b*v+c)/z,y:(d*u+e*v+f)/z}};
- const scale=3,off=document.createElement('canvas');
- off.width=Math.max(1,Math.ceil(Math.abs(w)*scale));off.height=Math.max(1,Math.ceil(Math.abs(h)*scale));
+ // Allocate enough physical pixels for the full perspective quad, not just
+ // the original rectangle. The corners can extend to 1.45x the source size.
+ const scale=3,boundsScale=1.5,off=document.createElement('canvas');
+ off.width=Math.max(1,Math.ceil(Math.abs(w)*boundsScale*scale));off.height=Math.max(1,Math.ceil(Math.abs(h)*boundsScale*scale));
  const mesh=off.getContext('2d');
  mesh.translate(off.width/2,off.height/2);mesh.scale(scale,scale);
  const steps=24;
