@@ -110,9 +110,7 @@ function drawTriangleImage(target,bitmap,s1,s2,s3,d1,d2,d3){
  const f=(d1.y*(s2.x*s3.y-s3.x*s2.y)+d2.y*(s3.x*s1.y-s1.x*s3.y)+d3.y*(s1.x*s2.y-s2.x*s1.y))/den;
  // Expand the destination triangle a fraction of a device pixel to cover
  // antialiased shared edges. This avoids the visible grid-shaped gaps.
- const inflate=.35,center={x:(d1.x+d2.x+d3.x)/3,y:(d1.y+d2.y+d3.y)/3};
- const expand=p=>{const dx=p.x-center.x,dy=p.y-center.y,len=Math.hypot(dx,dy)||1;return{x:p.x+dx/len*inflate,y:p.y+dy/len*inflate}};
- const q1=expand(d1),q2=expand(d2),q3=expand(d3);
+ const q1=d1,q2=d2,q3=d3;
  target.save();target.beginPath();target.moveTo(q1.x,q1.y);target.lineTo(q2.x,q2.y);target.lineTo(q3.x,q3.y);target.closePath();target.clip();target.transform(a,b,c,d,e,f);target.drawImage(bitmap,0,0);target.restore();
 }
 function drawPerspectiveImage(target,bitmap,w,h,px=0,py=0){
@@ -151,7 +149,7 @@ function drawPerspectiveImage(target,bitmap,w,h,px=0,py=0){
  off.width=Math.max(1,Math.ceil(Math.abs(w)*boundsScale*scale));off.height=Math.max(1,Math.ceil(Math.abs(h)*boundsScale*scale));
  const mesh=off.getContext('2d');
  mesh.translate(off.width/2,off.height/2);mesh.scale(scale,scale);
- const steps=24;
+ const steps=48;
  for(let iy=0;iy<steps;iy++)for(let ix=0;ix<steps;ix++){
   const u0=ix/steps,u1=(ix+1)/steps,v0=iy/steps,v1=(iy+1)/steps;
   const s00={x:u0*W,y:v0*H},s10={x:u1*W,y:v0*H},s11={x:u1*W,y:v1*H},s01={x:u0*W,y:v1*H};
