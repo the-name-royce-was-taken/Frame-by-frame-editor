@@ -113,9 +113,9 @@ function drawTriangleImage(target,bitmap,s1,s2,s3,d1,d2,d3){
 function drawPerspectiveImage(target,bitmap,w,h,px=0,py=0){
  if(!px&&!py){target.drawImage(bitmap,-w/2,-h/2,w,h);return}
  const x=Math.max(-.45,Math.min(.45,Number(px)||0)),y=Math.max(-.45,Math.min(.45,Number(py)||0));
- // Four straight destination edges form a trapezoid (or a general quad when
- // both controls are active). Map the whole image with one homography so the
- // texture doesn't fold or shear differently on either side of a diagonal.
+ // Keep the existing corner geometry and homography, but render the triangle
+ // mesh on a higher-resolution transparent surface. Downsampling the finished
+ // mesh removes the subpixel antialias seams between adjacent triangles.
  const dst=[
   {x:-w/2*(1+y),y:-h/2*(1+x)},
   {x: w/2*(1+y),y:-h/2*(1-x)},
@@ -124,7 +124,6 @@ function drawPerspectiveImage(target,bitmap,w,h,px=0,py=0){
  ];
  const W=bitmap.width,H=bitmap.height;
  const src=[{x:0,y:0},{x:W,y:0},{x:W,y:H},{x:0,y:H}];
- // Solve the eight homography coefficients for source -> destination.
  const rows=[];
  for(let i=0;i<4;i++){
   const u=src[i].x/W,v=src[i].y/H,X=dst[i].x,Y=dst[i].y;
@@ -141,17 +140,19 @@ function drawPerspectiveImage(target,bitmap,w,h,px=0,py=0){
  }
  const [a,b,c,d,e,f,g,k]=rows.map(r=>r[8]);
  const map=(u,v)=>{const z=g*u+k*v+1;return{x:(a*u+b*v+c)/z,y:(d*u+e*v+f)/z}};
- // Subdivide the projective mapping into small affine triangles. This keeps
- // the image continuous across the entire trapezoid instead of using one
- // unrelated affine transform per half.
+ const scale=3,off=document.createElement('canvas');
+ off.width=Math.max(1,Math.ceil(Math.abs(w)*scale));off.height=Math.max(1,Math.ceil(Math.abs(h)*scale));
+ const mesh=off.getContext('2d');
+ mesh.translate(off.width/2,off.height/2);mesh.scale(scale,scale);
  const steps=24;
  for(let iy=0;iy<steps;iy++)for(let ix=0;ix<steps;ix++){
   const u0=ix/steps,u1=(ix+1)/steps,v0=iy/steps,v1=(iy+1)/steps;
   const s00={x:u0*W,y:v0*H},s10={x:u1*W,y:v0*H},s11={x:u1*W,y:v1*H},s01={x:u0*W,y:v1*H};
   const d00=map(u0,v0),d10=map(u1,v0),d11=map(u1,v1),d01=map(u0,v1);
-  drawTriangleImage(target,bitmap,s00,s10,s11,d00,d10,d11);
-  drawTriangleImage(target,bitmap,s00,s11,s01,d00,d11,d01);
+  drawTriangleImage(mesh,bitmap,s00,s10,s11,d00,d10,d11);
+  drawTriangleImage(mesh,bitmap,s00,s11,s01,d00,d11,d01);
  }
+ target.drawImage(off,-w/2,-h/2,w,h);
 }
 function drawImageItems(target,handles=false){imageItems.forEach((o,i)=>{target.save();target.translate(o.x+o.w/2,o.y+o.h/2);target.rotate(o.rotation||0);target.globalAlpha*=o.opacity??1;drawPerspectiveImage(target,o.bitmap,o.w,o.h,o.perspectiveX||0,o.perspectiveY||0);if(handles&&i===imageSelectionIndex){target.strokeStyle='#8878ff';target.lineWidth=2;target.setLineDash([5,3]);target.strokeRect(-o.w/2,-o.h/2,o.w,o.h);target.setLineDash([]);target.fillStyle='#fff';target.strokeStyle='#8878ff';target.fillRect(o.w/2-6,o.h/2-6,12,12);target.strokeRect(o.w/2-6,o.h/2-6,12,12);target.beginPath();target.moveTo(0,-o.h/2);target.lineTo(0,-o.h/2-25);target.stroke();target.beginPath();target.arc(0,-o.h/2-32,8,0,Math.PI*2);target.fillStyle='#fff';target.fill();target.strokeStyle='#8878ff';target.stroke()}target.restore()})}
 function imageLocalPoint(o,p){const dx=p.x-(o.x+o.w/2),dy=p.y-(o.y+o.h/2),r=-(o.rotation||0);return{x:dx*Math.cos(r)-dy*Math.sin(r),y:dx*Math.sin(r)+dy*Math.cos(r)}}
