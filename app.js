@@ -27,18 +27,23 @@ function updateOpacityControl(){
  const percent=Math.round((item.opacity??1)*100);
  slider.value=String(percent);value.textContent=percent+'%';
  const pc=$('perspective-control'),px=$('image-perspective-x'),py=$('image-perspective-y');
- if(pc){pc.hidden=!image;if(image){px.value=String(Math.round((image.perspectiveX||0)*100));py.value=String(Math.round((image.perspectiveY||0)*100));$('perspective-x-value').textContent=px.value;$('perspective-y-value').textContent=py.value}}
+ if(pc){pc.hidden=!image;if(image){const xv=Math.max(-.45,Math.min(.45,Number(image.perspectiveX)||0)),yv=Math.max(-.45,Math.min(.45,Number(image.perspectiveY)||0));px.value=xv.toFixed(3);py.value=yv.toFixed(3);$('perspective-x-value').value=xv.toFixed(3);$('perspective-y-value').value=yv.toFixed(3)}}
 }
-function bindPerspectiveSlider(id,axis){
- $(id)?.addEventListener('input',async e=>{
+function bindPerspectiveControl(sliderId,inputId,axis){
+ const slider=$(sliderId),input=$(inputId);
+ const apply=async(raw,source)=>{
   const item=tool==='cursor'&&imageSelectionIndex>=0&&imageItems[imageSelectionIndex];if(!item)return;
-  item[axis]=Math.max(-.45,Math.min(.45,Number(e.target.value)/100));
-  const out=axis==='perspectiveX'?'perspective-x-value':'perspective-y-value';$(out).textContent=e.target.value;
+  const parsed=Number(raw);if(!Number.isFinite(parsed))return;
+  const value=Math.max(-.45,Math.min(.45,Math.round(parsed*1000)/1000));
+  item[axis]=value;slider.value=String(value);input.value=value.toFixed(3);
   await saveImageItems();render();timeline();
- });
+ };
+ slider?.addEventListener('input',e=>apply(e.target.value,slider));
+ input?.addEventListener('change',e=>apply(e.target.value,input));
+ input?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();input.blur()}});
 }
-bindPerspectiveSlider('image-perspective-x','perspectiveX');
-bindPerspectiveSlider('image-perspective-y','perspectiveY');
+bindPerspectiveControl('image-perspective-x','perspective-x-value','perspectiveX');
+bindPerspectiveControl('image-perspective-y','perspective-y-value','perspectiveY');
 $('object-opacity')?.addEventListener('input',async e=>{
  const opacity=Math.max(0,Math.min(1,Number(e.target.value)/100));
  const text=tool==='cursor'&&textSelectionIndex>=0&&textItems[textSelectionIndex];
