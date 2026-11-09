@@ -571,6 +571,11 @@ $('text-delete').onclick=deleteSelectedText;
 $('text-paste').onclick=pasteSelectedText;
 window.addEventListener('keydown',e=>{
  if(textEditor)return;
+ // Let editable controls handle Backspace/Delete and navigation keys themselves.
+ // Otherwise the global shortcut can delete the selected canvas image while a
+ // perspective number field is focused.
+ const target=e.target;
+ if(target instanceof HTMLElement&&(target.isContentEditable||target.matches('input,textarea,select')))return;
  const mod=e.ctrlKey||e.metaKey;
  if(mod&&(e.key.toLowerCase()==='b'||e.key.toLowerCase()==='u')&&tool==='cursor'&&textSelectionIndex>=0&&textItems[textSelectionIndex]){e.preventDefault();const o=textItems[textSelectionIndex];if(e.key.toLowerCase()==='b'){o.bold=!o.bold;fitTextBounds(o)}else o.underline=!o.underline;saveTextItems().then(()=>{render();timeline()});return}
  if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();$('undo').click();return}
