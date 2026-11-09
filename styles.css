@@ -387,3 +387,11 @@ body.dark-mode .audio-track-resize{background:#1d5148;color:#eafff8;border-left-
 .audio-track-resize-left{left:0;right:auto;border-left:0;border-right:1px solid #9fc7b7;border-radius:3px 0 0 3px}
 .audio-track-clip{padding-left:17px!important;padding-right:17px!important}
 body.dark-mode .audio-track-resize-left{border-right-color:#9fc7b7}
+
+/* Perspective sliders appear beside opacity for selected images. */
+.perspective-control{display:flex;align-items:center;gap:9px;padding:5px 8px;border:1px solid var(--line,#d8d4ca);border-radius:8px;background:var(--panel,#fff);font-size:11px;white-space:nowrap}
+.perspective-control[hidden]{display:none!important}
+.perspective-control label{display:flex;align-items:center;gap:5px}
+.perspective-control input{width:76px;accent-color:var(--accent,#8878ff)}
+.perspective-control output{min-width:24px;text-align:right;font-variant-numeric:tabular-nums}
+@media(max-width:760px){.workspace-toolbar{flex-wrap:wrap}.perspective-control{gap:5px;padding:4px}.perspective-control input{width:55px}}
