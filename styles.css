@@ -393,5 +393,5 @@ body.dark-mode .audio-track-resize-left{border-right-color:#9fc7b7}
 .perspective-control[hidden]{display:none!important}
 .perspective-control label{display:flex;align-items:center;gap:5px}
 .perspective-control input[type=range]{width:76px;accent-color:var(--accent,#8878ff)}
-.perspective-control .perspective-number{width:62px;padding:3px 4px;border:1px solid var(--line,#d8d4ca);border-radius:4px;background:var(--surface,#fff);color:inherit;font:inherit;font-variant-numeric:tabular-nums}
+.perspective-control .perspective-number{width:62px;padding:3px 4px;border:1px solid var(--line,#d8d4ca);border-radius:4px;background:var(--surface,#fff);color:#000!important;font:inherit;font-variant-numeric:tabular-nums}
 @media(max-width:760px){.workspace-toolbar{flex-wrap:wrap}.perspective-control{gap:5px;padding:4px}.perspective-control input[type=range]{width:55px}.perspective-control .perspective-number{width:58px}}
