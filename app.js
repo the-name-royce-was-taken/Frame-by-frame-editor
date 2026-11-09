@@ -157,6 +157,11 @@ function drawPerspectiveImage(target,bitmap,w,h,px=0,py=0){
   const u0=ix/steps,u1=(ix+1)/steps,v0=iy/steps,v1=(iy+1)/steps;
   const s00={x:u0*W,y:v0*H},s10={x:u1*W,y:v0*H},s11={x:u1*W,y:v1*H},s01={x:u0*W,y:v1*H};
   const d00=map(u0,v0),d10=map(u1,v0),d11=map(u1,v1),d01=map(u0,v1);
+  // A near-singular homography can produce invalid coordinates for a mesh
+  // cell. Never let one bad cell abort render() after the main canvas is cleared.
+  if(!d00||!d10||!d11||!d01||![d00.x,d00.y,d10.x,d10.y,d11.x,d11.y,d01.x,d01.y].every(Number.isFinite)){
+   target.drawImage(bitmap,-w/2,-h/2,w,h);off.width=0;off.height=0;return;
+  }
   drawTriangleImage(mesh,bitmap,s00,s10,s11,d00,d10,d11);
   drawTriangleImage(mesh,bitmap,s00,s11,s01,d00,d11,d01);
  }
