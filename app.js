@@ -12,7 +12,7 @@ async function createStoredBlankFrame(time=0){
  if(blob){const k=key('draw');await FrameStore.put(k,blob);ramFrameBlobs.set(k,blob);frame.drawKey=k}
  return frame;
 }
-async function saveImageItems(){if(!frames.length)return;const f=frames[index],blob=new Blob([JSON.stringify(imageItems.map(({key,x,y,w,h,rotation,opacity})=>({key,x,y,w,h,rotation:rotation||0,opacity:opacity??1})))],{type:'application/json'});const k=key('images');await FrameStore.put(k,blob);ramFrameBlobs.set(k,blob);if(f.imagesKey){await FrameStore.del(f.imagesKey);ramFrameBlobs.delete(f.imagesKey)}f.imagesKey=k}
+async function saveImageItems(){if(!frames.length)return;const f=frames[index],blob=new Blob([JSON.stringify(imageItems.map(({key,x,y,w,h,rotation,opacity,perspectiveX,perspectiveY})=>({key,x,y,w,h,rotation:rotation||0,opacity:opacity??1,perspectiveX:perspectiveX||0,perspectiveY:perspectiveY||0})))],{type:'application/json'});const k=key('images');await FrameStore.put(k,blob);ramFrameBlobs.set(k,blob);if(f.imagesKey){await FrameStore.del(f.imagesKey);ramFrameBlobs.delete(f.imagesKey)}f.imagesKey=k}
 async function saveTextItems(){if(!frames.length)return;const f=frames[index],blob=new Blob([JSON.stringify(textItems)],{type:'application/json'});const k=key('text');await FrameStore.put(k,blob);ramFrameBlobs.set(k,blob);if(f.textKey){await FrameStore.del(f.textKey);ramFrameBlobs.delete(f.textKey)}f.textKey=k}
 function fitTextBounds(o){const target=ctx;target.save();target.font=`${o.bold?'bold ':''}${o.size}px ${o.font||'Arial'}`;const lines=String(o.text||'').split(/\r?\n/);o.w=Math.max(20,...lines.map(line=>target.measureText(line).width));o.h=Math.max(o.size,lines.length*o.size*1.2);target.restore()}
 function updateOpacityControl(){
@@ -26,7 +26,19 @@ function updateOpacityControl(){
  label.textContent=text?'Text opacity':'Image opacity';
  const percent=Math.round((item.opacity??1)*100);
  slider.value=String(percent);value.textContent=percent+'%';
+ const pc=$('perspective-control'),px=$('image-perspective-x'),py=$('image-perspective-y');
+ if(pc){pc.hidden=!image;if(image){px.value=String(Math.round((image.perspectiveX||0)*100));py.value=String(Math.round((image.perspectiveY||0)*100));$('perspective-x-value').textContent=px.value;$('perspective-y-value').textContent=py.value}}
 }
+function bindPerspectiveSlider(id,axis){
+ $(id)?.addEventListener('input',async e=>{
+  const item=tool==='cursor'&&imageSelectionIndex>=0&&imageItems[imageSelectionIndex];if(!item)return;
+  item[axis]=Math.max(-.45,Math.min(.45,Number(e.target.value)/100));
+  const out=axis==='perspectiveX'?'perspective-x-value':'perspective-y-value';$(out).textContent=e.target.value;
+  await saveImageItems();render();timeline();
+ });
+}
+bindPerspectiveSlider('image-perspective-x','perspectiveX');
+bindPerspectiveSlider('image-perspective-y','perspectiveY');
 $('object-opacity')?.addEventListener('input',async e=>{
  const opacity=Math.max(0,Math.min(1,Number(e.target.value)/100));
  const text=tool==='cursor'&&textSelectionIndex>=0&&textItems[textSelectionIndex];
@@ -82,7 +94,28 @@ function openTextEditor(i,x,y){
 }
 async function finishTextEditor(){if(!textEditor)return;const editor=textEditor,i=textEditorIndex; textEditor=null;textEditorIndex=-1;const value=editor.value.trimEnd();editor.toolbar?.remove();editor.remove();if(i<0)return;if(!value.trim()){textItems.splice(i,1)}else{const o=textItems[i];o.text=value;const tc=ctx;tc.font=`${o.bold?'bold ':''}${o.size}px ${o.font}`;const lines=value.split(/\r?\n/);o.w=Math.max(30,...lines.map(line=>tc.measureText(line).width));o.h=Math.max(o.size,lines.length*o.size*1.2)}await saveTextItems();render();timeline()}
 function cancelTextEditor(){if(!textEditor)return;const i=textEditorIndex;textEditor.toolbar?.remove();textEditor.remove();textEditor=null;textEditorIndex=-1;if(i>=0&&!textItems[i]?.text)textItems.splice(i,1);render()}
-function drawImageItems(target,handles=false){imageItems.forEach((o,i)=>{target.save();target.translate(o.x+o.w/2,o.y+o.h/2);target.rotate(o.rotation||0);target.globalAlpha*=o.opacity??1;target.drawImage(o.bitmap,-o.w/2,-o.h/2,o.w,o.h);if(handles&&i===imageSelectionIndex){target.strokeStyle='#8878ff';target.lineWidth=2;target.setLineDash([5,3]);target.strokeRect(-o.w/2,-o.h/2,o.w,o.h);target.setLineDash([]);target.fillStyle='#fff';target.strokeStyle='#8878ff';target.fillRect(o.w/2-6,o.h/2-6,12,12);target.strokeRect(o.w/2-6,o.h/2-6,12,12);target.beginPath();target.moveTo(0,-o.h/2);target.lineTo(0,-o.h/2-25);target.stroke();target.beginPath();target.arc(0,-o.h/2-32,8,0,Math.PI*2);target.fillStyle='#fff';target.fill();target.strokeStyle='#8878ff';target.stroke()}target.restore()})}
+function drawTriangleImage(target,bitmap,s1,s2,s3,d1,d2,d3){
+ const den=s1.x*(s2.y-s3.y)+s2.x*(s3.y-s1.y)+s3.x*(s1.y-s2.y);if(Math.abs(den)<1e-8)return;
+ const a=(d1.x*(s2.y-s3.y)+d2.x*(s3.y-s1.y)+d3.x*(s1.y-s2.y))/den;
+ const c=(d1.x*(s3.x-s2.x)+d2.x*(s1.x-s3.x)+d3.x*(s2.x-s1.x))/den;
+ const e=(d1.x*(s2.x*s3.y-s3.x*s2.y)+d2.x*(s3.x*s1.y-s1.x*s3.y)+d3.x*(s1.x*s2.y-s2.x*s1.y))/den;
+ const b=(d1.y*(s2.y-s3.y)+d2.y*(s3.y-s1.y)+d3.y*(s1.y-s2.y))/den;
+ const d=(d1.y*(s3.x-s2.x)+d2.y*(s1.x-s3.x)+d3.y*(s2.x-s1.x))/den;
+ const f=(d1.y*(s2.x*s3.y-s3.x*s2.y)+d2.y*(s3.x*s1.y-s1.x*s3.y)+d3.y*(s1.x*s2.y-s2.x*s1.y))/den;
+ target.save();target.beginPath();target.moveTo(d1.x,d1.y);target.lineTo(d2.x,d2.y);target.lineTo(d3.x,d3.y);target.closePath();target.clip();target.transform(a,b,c,d,e,f);target.drawImage(bitmap,0,0);target.restore();
+}
+function drawPerspectiveImage(target,bitmap,w,h,px=0,py=0){
+ if(!px&&!py){target.drawImage(bitmap,-w/2,-h/2,w,h);return}
+ const sx=bitmap.width,sy=bitmap.height,x=Math.max(-.45,Math.min(.45,px||0)),y=Math.max(-.45,Math.min(.45,py||0));
+ const src=[{x:0,y:0},{x:sx,y:0},{x:sx,y:sy},{x:0,y:sy}],dst=[
+ {x:-w/2*(1-x),y:-h/2*(1-y)},
+ {x:w/2*(1-x),y:-h/2*(1+y)},
+ {x:w/2*(1+x),y:h/2*(1+y)},
+ {x:-w/2*(1+x),y:h/2*(1-y)}];
+ drawTriangleImage(target,bitmap,src[0],src[1],src[2],dst[0],dst[1],dst[2]);
+ drawTriangleImage(target,bitmap,src[0],src[2],src[3],dst[0],dst[2],dst[3]);
+}
+function drawImageItems(target,handles=false){imageItems.forEach((o,i)=>{target.save();target.translate(o.x+o.w/2,o.y+o.h/2);target.rotate(o.rotation||0);target.globalAlpha*=o.opacity??1;drawPerspectiveImage(target,o.bitmap,o.w,o.h,o.perspectiveX||0,o.perspectiveY||0);if(handles&&i===imageSelectionIndex){target.strokeStyle='#8878ff';target.lineWidth=2;target.setLineDash([5,3]);target.strokeRect(-o.w/2,-o.h/2,o.w,o.h);target.setLineDash([]);target.fillStyle='#fff';target.strokeStyle='#8878ff';target.fillRect(o.w/2-6,o.h/2-6,12,12);target.strokeRect(o.w/2-6,o.h/2-6,12,12);target.beginPath();target.moveTo(0,-o.h/2);target.lineTo(0,-o.h/2-25);target.stroke();target.beginPath();target.arc(0,-o.h/2-32,8,0,Math.PI*2);target.fillStyle='#fff';target.fill();target.strokeStyle='#8878ff';target.stroke()}target.restore()})}
 function imageLocalPoint(o,p){const dx=p.x-(o.x+o.w/2),dy=p.y-(o.y+o.h/2),r=-(o.rotation||0);return{x:dx*Math.cos(r)-dy*Math.sin(r),y:dx*Math.sin(r)+dy*Math.cos(r)}}
 function imageHit(o,p){const q=imageLocalPoint(o,p);return Math.abs(q.x)<=o.w/2&&Math.abs(q.y)<=o.h/2}
 function updateImageRotateControl(){if(!imageRotateControl)return;const visible=tool==='cursor'&&imageSelectionIndex>=0&&!!imageItems[imageSelectionIndex];imageRotateControl.hidden=!visible;if(!visible)return;const o=imageItems[imageSelectionIndex],cr=canvas.getBoundingClientRect(),sr=$('stage').getBoundingClientRect();imageRotateControl.style.left=(cr.left-sr.left+(o.x+o.w)*cr.width/canvas.width-9)+'px';imageRotateControl.style.top=(cr.top-sr.top+o.y*cr.height/canvas.height-9)+'px'}
@@ -94,7 +127,7 @@ async function cachedFrameBlob(k){if(!k)return null;if(ramFrameBlobs.has(k))retu
 async function warmFrameWindow(center=index){const wanted=new Set(),start=Math.max(0,center-10),end=Math.min(frames.length-1,center+10);for(let i=start;i<=end;i++){const f=frames[i];for(const k of [f.baseKey,f.drawKey,f.textKey,f.imagesKey])if(k)wanted.add(k)}await Promise.all([...wanted].map(k=>cachedFrameBlob(k).catch(()=>null)));for(let i=start;i<=end;i++){const k=frames[i].imagesKey;if(!k)continue;try{const meta=await cachedFrameBlob(k);if(meta){const items=JSON.parse(await meta.text());for(const item of items)if(item.key)wanted.add(item.key)}}catch{}}await Promise.all([...wanted].map(k=>cachedFrameBlob(k).catch(()=>null)));for(const k of ramFrameBlobs.keys())if(!wanted.has(k))ramFrameBlobs.delete(k)}
 async function saveActive(){if(!frames.length||!activeDrawDirty)return;const blob=await new Promise(r=>activeDraw.toBlob(r,'image/webp',.72));await storeBlob('draw',blob,frames[index]);activeDrawDirty=false}
 async function bitmapFromKey(k){const blob=await cachedFrameBlob(k);return blob?await createImageBitmap(blob):null}
-async function loadFrame(i){if(!frames.length)return;await saveActive();index=Math.max(0,Math.min(frames.length-1,i));const token=++loadToken,frame=frames[index];warmFrameWindow(index).catch(err=>console.warn('Nearby frame prefetch failed',err));activeDraw.width=canvas.width;activeDraw.height=canvas.height;activeBase=null;activeDrawDirty=false;textItems=[];imageItems=[];imageSelectionIndex=-1;try{if(frame.imagesKey){const ib=await cachedFrameBlob(frame.imagesKey);if(ib){const saved=JSON.parse(await ib.text());for(const item of saved){const blob=await cachedFrameBlob(item.key);if(blob){const bitmap=await createImageBitmap(blob);if(token!==loadToken){bitmap.close?.();return}imageItems.push({...item,opacity:Math.max(0,Math.min(1,Number(item.opacity??1)||0)),bitmap})}}}}if(frame.textKey){const tb=await cachedFrameBlob(frame.textKey);if(tb)textItems=JSON.parse(await tb.text()).map(item=>({...item,opacity:Math.max(0,Math.min(1,Number(item.opacity??1)||0))}))}activeBase=await bitmapFromKey(frame.baseKey);if(token!==loadToken){activeBase?.close?.();return}const draw=await bitmapFromKey(frame.drawKey);if(draw){dctx().drawImage(draw,0,0);draw.close?.()}}catch(err){$('status').textContent='Could not load frame from local storage: '+err.message}selection=null;paste=null;textSelectionIndex=-1;await render();timeline()}
+async function loadFrame(i){if(!frames.length)return;await saveActive();index=Math.max(0,Math.min(frames.length-1,i));const token=++loadToken,frame=frames[index];warmFrameWindow(index).catch(err=>console.warn('Nearby frame prefetch failed',err));activeDraw.width=canvas.width;activeDraw.height=canvas.height;activeBase=null;activeDrawDirty=false;textItems=[];imageItems=[];imageSelectionIndex=-1;try{if(frame.imagesKey){const ib=await cachedFrameBlob(frame.imagesKey);if(ib){const saved=JSON.parse(await ib.text());for(const item of saved){const blob=await cachedFrameBlob(item.key);if(blob){const bitmap=await createImageBitmap(blob);if(token!==loadToken){bitmap.close?.();return}imageItems.push({...item,opacity:Math.max(0,Math.min(1,Number(item.opacity??1)||0)),perspectiveX:Math.max(-.45,Math.min(.45,Number(item.perspectiveX)||0)),perspectiveY:Math.max(-.45,Math.min(.45,Number(item.perspectiveY)||0)),bitmap})}}}}if(frame.textKey){const tb=await cachedFrameBlob(frame.textKey);if(tb)textItems=JSON.parse(await tb.text()).map(item=>({...item,opacity:Math.max(0,Math.min(1,Number(item.opacity??1)||0))}))}activeBase=await bitmapFromKey(frame.baseKey);if(token!==loadToken){activeBase?.close?.();return}const draw=await bitmapFromKey(frame.drawKey);if(draw){dctx().drawImage(draw,0,0);draw.close?.()}}catch(err){$('status').textContent='Could not load frame from local storage: '+err.message}selection=null;paste=null;textSelectionIndex=-1;await render();timeline()}
 async function render(){updateOpacityControl();ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.save();const scale=frameContentScale();ctx.translate(canvas.width/2,canvas.height/2);ctx.scale(scale,scale);ctx.translate(-canvas.width/2,-canvas.height/2);if(activeBase)ctx.drawImage(activeBase,0,0,canvas.width,canvas.height);ctx.drawImage(activeDraw,0,0);drawImageItems(ctx,tool==='cursor');drawTextItems(ctx,textItems,tool==='text'||tool==='cursor');if(shapePreviewEnd&&['line','rect','ellipse','triangle','polygon'].includes(tool))drawShape(ctx,start,shapePreviewEnd);if(selection){ctx.save();const cx=selection.x+selection.w/2,cy=selection.y+selection.h/2;ctx.translate(cx,cy);ctx.rotate(selection.rotation||0);ctx.setLineDash([7,4]);ctx.strokeStyle='#7665ef';ctx.lineWidth=2;ctx.strokeRect(-selection.w/2,-selection.h/2,selection.w,selection.h);ctx.setLineDash([]);ctx.fillStyle='#fff';ctx.strokeStyle='#8878ff';ctx.fillRect(selection.w/2-6,selection.h/2-6,12,12);ctx.strokeRect(selection.w/2-6,selection.h/2-6,12,12);ctx.beginPath();ctx.moveTo(0,-selection.h/2);ctx.lineTo(0,-selection.h/2-25);ctx.stroke();ctx.beginPath();ctx.arc(0,-selection.h/2-32,8,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.restore()}if(paste){ctx.save();ctx.translate(paste.x+paste.w/2,paste.y+paste.h/2);ctx.rotate(paste.rotation||0);ctx.drawImage(paste.img,-paste.w/2,-paste.h/2,paste.w,paste.h);ctx.strokeStyle='#8878ff';ctx.lineWidth=2;ctx.setLineDash([5,3]);ctx.strokeRect(-paste.w/2,-paste.h/2,paste.w,paste.h);ctx.setLineDash([]);ctx.fillStyle='#fff';ctx.fillRect(paste.w/2-6,paste.h/2-6,12,12);ctx.strokeRect(paste.w/2-6,paste.h/2-6,12,12);ctx.beginPath();ctx.moveTo(0,-paste.h/2);ctx.lineTo(0,-paste.h/2-25);ctx.stroke();ctx.beginPath();ctx.arc(0,-paste.h/2-32,8,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.restore()}ctx.restore();updateTextFontControl();updateImageRotateControl();$('count').textContent='Frame '+(index+1)+' / '+frames.length;$('scrub').max=Math.max(0,frames.length-1);$('scrub').value=index;$('timeline-count').textContent=frames.length+' frame'+(frames.length===1?'':'s');$('canvas-label').textContent=canvas.width+' × '+canvas.height;$('empty-state').hidden=frames.length>0;$('media-placeholder').hidden=!!videoFile||!!audioFile}
 async function deleteTimelineFrame(i){if(i<0||i>=frames.length||frames.length<=1)return;await saveActive();const removed=frames.splice(i,1)[0];pushUndo({type:'delete-frame',frame:removed,index:i,wasCurrent:i===index,selectedIndex:index});if(i<index)index--;else if(i===index)index=Math.min(i,frames.length-1);await loadFrame(index)}
 async function duplicateTimelineFrame(i){
@@ -213,7 +246,7 @@ async function copySelectedImage(){
  if(!item){$('status').textContent='Select an image first';return}
  const blob=item.key?await cachedFrameBlob(item.key):null;
  if(!blob){$('status').textContent='Could not copy this image';return}
- imageClipboard={blob,x:item.x,y:item.y,w:item.w,h:item.h,rotation:item.rotation||0,opacity:item.opacity??1};
+ imageClipboard={blob,x:item.x,y:item.y,w:item.w,h:item.h,rotation:item.rotation||0,opacity:item.opacity??1,perspectiveX:item.perspectiveX||0,perspectiveY:item.perspectiveY||0};
  objectClipboardType='image';$('status').textContent='Image copied — paste keeps its original position';
 }
 async function pasteSelectedImage(){
@@ -222,7 +255,7 @@ async function pasteSelectedImage(){
  try{
   await FrameStore.put(assetKey,copy.blob);ramFrameBlobs.set(assetKey,copy.blob);
   const bitmap=await createImageBitmap(copy.blob);
-  imageItems.push({key:assetKey,x:copy.x,y:copy.y,w:copy.w,h:copy.h,rotation:copy.rotation,opacity:copy.opacity,bitmap});
+  imageItems.push({key:assetKey,x:copy.x,y:copy.y,w:copy.w,h:copy.h,rotation:copy.rotation,opacity:copy.opacity,perspectiveX:copy.perspectiveX||0,perspectiveY:copy.perspectiveY||0,bitmap});
   imageSelectionIndex=imageItems.length-1;textSelectionIndex=-1;tool='cursor';document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool==='cursor'));updateToolCursor();
   await saveImageItems();render();timeline();$('status').textContent='Image pasted at its original position';
  }catch(err){await FrameStore.del(assetKey).catch(()=>{});ramFrameBlobs.delete(assetKey);$('status').textContent='Could not paste image: '+err.message}
@@ -358,7 +391,7 @@ async function createFFmpegInstance(){
  });
  return ff;
 }
-async function exportFrame(frame){const out=document.createElement('canvas');out.width=canvas.width;out.height=canvas.height;const x=out.getContext('2d',{alpha:false});x.fillStyle='#fff';x.fillRect(0,0,out.width,out.height);x.save();const scale=frameContentScale(frame);x.translate(out.width/2,out.height/2);x.scale(scale,scale);x.translate(-out.width/2,-out.height/2);const base=await bitmapFromKey(frame.baseKey);if(base){x.drawImage(base,0,0,out.width,out.height);base.close?.()}const draw=await bitmapFromKey(frame.drawKey);if(draw){x.drawImage(draw,0,0);draw.close?.()}if(frame.imagesKey){const ib=await cachedFrameBlob(frame.imagesKey);if(ib){try{const items=JSON.parse(await ib.text());for(const item of items){const blob=await cachedFrameBlob(item.key);if(blob){const bm=await createImageBitmap(blob);x.save();x.translate(item.x+item.w/2,item.y+item.h/2);x.rotate(item.rotation||0);x.globalAlpha*=item.opacity??1;x.drawImage(bm,-item.w/2,-item.h/2,item.w,item.h);x.restore();bm.close?.()}}}catch{}}}if(frame.textKey){const tb=await cachedFrameBlob(frame.textKey);if(tb){try{drawTextItems(x,JSON.parse(await tb.text()))}catch{}}}x.restore();return new Promise(resolve=>out.toBlob(resolve,'image/png'))}
+async function exportFrame(frame){const out=document.createElement('canvas');out.width=canvas.width;out.height=canvas.height;const x=out.getContext('2d',{alpha:false});x.fillStyle='#fff';x.fillRect(0,0,out.width,out.height);x.save();const scale=frameContentScale(frame);x.translate(out.width/2,out.height/2);x.scale(scale,scale);x.translate(-out.width/2,-out.height/2);const base=await bitmapFromKey(frame.baseKey);if(base){x.drawImage(base,0,0,out.width,out.height);base.close?.()}const draw=await bitmapFromKey(frame.drawKey);if(draw){x.drawImage(draw,0,0);draw.close?.()}if(frame.imagesKey){const ib=await cachedFrameBlob(frame.imagesKey);if(ib){try{const items=JSON.parse(await ib.text());for(const item of items){const blob=await cachedFrameBlob(item.key);if(blob){const bm=await createImageBitmap(blob);x.save();x.translate(item.x+item.w/2,item.y+item.h/2);x.rotate(item.rotation||0);x.globalAlpha*=item.opacity??1;drawPerspectiveImage(x,bm,item.w,item.h,item.perspectiveX||0,item.perspectiveY||0);x.restore();bm.close?.()}}}catch{}}}if(frame.textKey){const tb=await cachedFrameBlob(frame.textKey);if(tb){try{drawTextItems(x,JSON.parse(await tb.text()))}catch{}}}x.restore();return new Promise(resolve=>out.toBlob(resolve,'image/png'))}
 async function buildStitchedPreview(){
  if(!frames.length)throw Error('There are no frames to play.');
  $('status').textContent='Preparing edited frames for playback…';
