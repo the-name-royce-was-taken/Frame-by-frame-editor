@@ -107,11 +107,14 @@ function drawTriangleImage(target,bitmap,s1,s2,s3,d1,d2,d3){
 function drawPerspectiveImage(target,bitmap,w,h,px=0,py=0){
  if(!px&&!py){target.drawImage(bitmap,-w/2,-h/2,w,h);return}
  const sx=bitmap.width,sy=bitmap.height,x=Math.max(-.45,Math.min(.45,px||0)),y=Math.max(-.45,Math.min(.45,py||0));
+ // X controls left-versus-right taper; Y controls top-versus-bottom taper.
+ // Positive X makes the left side wider and the right side narrower.
+ // Positive Y makes the top wider and the bottom narrower.
  const src=[{x:0,y:0},{x:sx,y:0},{x:sx,y:sy},{x:0,y:sy}],dst=[
- {x:-w/2*(1-x),y:-h/2*(1-y)},
- {x:w/2*(1-x),y:-h/2*(1+y)},
- {x:w/2*(1+x),y:h/2*(1+y)},
- {x:-w/2*(1+x),y:h/2*(1-y)}];
+ {x:-w/2*(1+x)*(1+y),y:-h/2},
+ {x:w/2*(1-x)*(1+y),y:-h/2},
+ {x:w/2*(1-x)*(1-y),y:h/2},
+ {x:-w/2*(1+x)*(1-y),y:h/2}];
  drawTriangleImage(target,bitmap,src[0],src[1],src[2],dst[0],dst[1],dst[2]);
  drawTriangleImage(target,bitmap,src[0],src[2],src[3],dst[0],dst[2],dst[3]);
 }
