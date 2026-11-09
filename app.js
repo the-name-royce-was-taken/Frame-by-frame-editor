@@ -108,7 +108,12 @@ function drawTriangleImage(target,bitmap,s1,s2,s3,d1,d2,d3){
  const b=(d1.y*(s2.y-s3.y)+d2.y*(s3.y-s1.y)+d3.y*(s1.y-s2.y))/den;
  const d=(d1.y*(s3.x-s2.x)+d2.y*(s1.x-s3.x)+d3.y*(s2.x-s1.x))/den;
  const f=(d1.y*(s2.x*s3.y-s3.x*s2.y)+d2.y*(s3.x*s1.y-s1.x*s3.y)+d3.y*(s1.x*s2.y-s2.x*s1.y))/den;
- target.save();target.beginPath();target.moveTo(d1.x,d1.y);target.lineTo(d2.x,d2.y);target.lineTo(d3.x,d3.y);target.closePath();target.clip();target.transform(a,b,c,d,e,f);target.drawImage(bitmap,0,0);target.restore();
+ // Expand the destination triangle a fraction of a device pixel to cover
+ // antialiased shared edges. This avoids the visible grid-shaped gaps.
+ const inflate=.35,center={x:(d1.x+d2.x+d3.x)/3,y:(d1.y+d2.y+d3.y)/3};
+ const expand=p=>{const dx=p.x-center.x,dy=p.y-center.y,len=Math.hypot(dx,dy)||1;return{x:p.x+dx/len*inflate,y:p.y+dy/len*inflate}};
+ const q1=expand(d1),q2=expand(d2),q3=expand(d3);
+ target.save();target.beginPath();target.moveTo(q1.x,q1.y);target.lineTo(q2.x,q2.y);target.lineTo(q3.x,q3.y);target.closePath();target.clip();target.transform(a,b,c,d,e,f);target.drawImage(bitmap,0,0);target.restore();
 }
 function drawPerspectiveImage(target,bitmap,w,h,px=0,py=0){
  if(!px&&!py){target.drawImage(bitmap,-w/2,-h/2,w,h);return}
@@ -154,7 +159,51 @@ function drawPerspectiveImage(target,bitmap,w,h,px=0,py=0){
  }
  target.drawImage(off,-w/2,-h/2,w,h);
 }
-function drawImageItems(target,handles=false){imageItems.forEach((o,i)=>{target.save();target.translate(o.x+o.w/2,o.y+o.h/2);target.rotate(o.rotation||0);target.globalAlpha*=o.opacity??1;drawPerspectiveImage(target,o.bitmap,o.w,o.h,o.perspectiveX||0,o.perspectiveY||0);if(handles&&i===imageSelectionIndex){target.strokeStyle='#8878ff';target.lineWidth=2;target.setLineDash([5,3]);target.strokeRect(-o.w/2,-o.h/2,o.w,o.h);target.setLineDash([]);target.fillStyle='#fff';target.strokeStyle='#8878ff';target.fillRect(o.w/2-6,o.h/2-6,12,12);target.strokeRect(o.w/2-6,o.h/2-6,12,12);target.beginPath();target.moveTo(0,-o.h/2);target.lineTo(0,-o.h/2-25);target.stroke();target.beginPath();target.arc(0,-o.h/2-32,8,0,Math.PI*2);target.fillStyle='#fff';target.fill();target.strokeStyle='#8878ff';target.stroke()}target.restore()})}
+function drawPerspectiveImage(target,bitmap,w,h,px=0,py=0){
+ if(!px&&!py){target.drawImage(bitmap,-w/2,-h/2,w,h);return}
+ const x=Math.max(-.45,Math.min(.45,Number(px)||0)),y=Math.max(-.45,Math.min(.45,Number(py)||0));
+ // Keep the existing corner geometry and homography, but render the triangle
+ // mesh on a higher-resolution transparent surface. Downsampling the finished
+ // mesh removes the subpixel antialias seams between adjacent triangles.
+ const dst=[
+  {x:-w/2*(1+y),y:-h/2*(1+x)},
+  {x: w/2*(1+y),y:-h/2*(1-x)},
+  {x: w/2*(1-y),y: h/2*(1-x)},
+  {x:-w/2*(1-y),y: h/2*(1+x)}
+ ];
+ const W=bitmap.width,H=bitmap.height;
+ const src=[{x:0,y:0},{x:W,y:0},{x:W,y:H},{x:0,y:H}];
+ const rows=[];
+ for(let i=0;i<4;i++){
+  const u=src[i].x/W,v=src[i].y/H,X=dst[i].x,Y=dst[i].y;
+  rows.push([u,v,1,0,0,0,-X*u,-X*v,X]);
+  rows.push([0,0,0,u,v,1,-Y*u,-Y*v,Y]);
+ }
+ for(let col=0;col<8;col++){
+  let pivot=col;
+  for(let r=col+1;r<8;r++)if(Math.abs(rows[r][col])>Math.abs(rows[pivot][col]))pivot=r;
+  if(Math.abs(rows[pivot][col])<1e-10){target.drawImage(bitmap,-w/2,-h/2,w,h);return;}
+  [rows[col],rows[pivot]]=[rows[pivot],rows[col]];
+  const div=rows[col][col];for(let j=col;j<=8;j++)rows[col][j]/=div;
+  for(let r=0;r<8;r++)if(r!==col){const factor=rows[r][col];for(let j=col;j<=8;j++)rows[r][j]-=factor*rows[col][j]}
+ }
+ const [a,b,c,d,e,f,g,k]=rows.map(r=>r[8]);
+ const map=(u,v)=>{const z=g*u+k*v+1;if(!Number.isFinite(z)||Math.abs(z)<1e-8)return null;return{x:(a*u+b*v+c)/z,y:(d*u+e*v+f)/z}};
+ const scale=3,off=document.createElement('canvas');
+ off.width=Math.max(1,Math.ceil(Math.abs(w)*scale));off.height=Math.max(1,Math.ceil(Math.abs(h)*scale));
+ const mesh=off.getContext('2d');
+ mesh.translate(off.width/2,off.height/2);mesh.scale(scale,scale);
+ const steps=24;
+ for(let iy=0;iy<steps;iy++)for(let ix=0;ix<steps;ix++){
+  const u0=ix/steps,u1=(ix+1)/steps,v0=iy/steps,v1=(iy+1)/steps;
+  const s00={x:u0*W,y:v0*H},s10={x:u1*W,y:v0*H},s11={x:u1*W,y:v1*H},s01={x:u0*W,y:v1*H};
+  const d00=map(u0,v0),d10=map(u1,v0),d11=map(u1,v1),d01=map(u0,v1);
+  drawTriangleImage(mesh,bitmap,s00,s10,s11,d00,d10,d11);
+  drawTriangleImage(mesh,bitmap,s00,s11,s01,d00,d11,d01);
+ }
+ target.drawImage(off,-w/2,-h/2,w,h);
+}
+function drawImageItems(target,handles=false){imageItems.forEach((o,i)=>{target.save();target.translate(o.x+o.w/2,o.y+o.h/2);target.rotate(o.rotation||0);target.globalAlpha*=o.opacity??1;drawPerspectiveImage(target,o.bitmap,o.w,o.h,o.perspectiveX||0,o.perspectiveY||0);if(handles&&i===imageSelectionIndex){const px=Math.max(-.45,Math.min(.45,Number(o.perspectiveX)||0)),py=Math.max(-.45,Math.min(.45,Number(o.perspectiveY)||0)),corners=[[-o.w/2*(1+py),-o.h/2*(1+px)],[o.w/2*(1+py),-o.h/2*(1-px)],[o.w/2*(1-py),o.h/2*(1-px)],[-o.w/2*(1-py),o.h/2*(1+px)]];target.strokeStyle='#8878ff';target.lineWidth=2;target.setLineDash([5,3]);target.beginPath();target.moveTo(corners[0][0],corners[0][1]);corners.slice(1).forEach(p=>target.lineTo(p[0],p[1]));target.closePath();target.stroke();target.setLineDash([]);target.fillStyle='#fff';target.strokeStyle='#8878ff';target.fillRect(o.w/2-6,o.h/2-6,12,12);target.strokeRect(o.w/2-6,o.h/2-6,12,12);target.beginPath();target.moveTo(0,-o.h/2);target.lineTo(0,-o.h/2-25);target.stroke();target.beginPath();target.arc(0,-o.h/2-32,8,0,Math.PI*2);target.fillStyle='#fff';target.fill();target.strokeStyle='#8878ff';target.stroke()}target.restore()})}
 function imageLocalPoint(o,p){const dx=p.x-(o.x+o.w/2),dy=p.y-(o.y+o.h/2),r=-(o.rotation||0);return{x:dx*Math.cos(r)-dy*Math.sin(r),y:dx*Math.sin(r)+dy*Math.cos(r)}}
 function imageHit(o,p){const q=imageLocalPoint(o,p);return Math.abs(q.x)<=o.w/2&&Math.abs(q.y)<=o.h/2}
 function updateImageRotateControl(){if(!imageRotateControl)return;const visible=tool==='cursor'&&imageSelectionIndex>=0&&!!imageItems[imageSelectionIndex];imageRotateControl.hidden=!visible;if(!visible)return;const o=imageItems[imageSelectionIndex],cr=canvas.getBoundingClientRect(),sr=$('stage').getBoundingClientRect();imageRotateControl.style.left=(cr.left-sr.left+(o.x+o.w)*cr.width/canvas.width-9)+'px';imageRotateControl.style.top=(cr.top-sr.top+o.y*cr.height/canvas.height-9)+'px'}
