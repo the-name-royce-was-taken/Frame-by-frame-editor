@@ -108,9 +108,12 @@ function drawTriangleImage(target,bitmap,s1,s2,s3,d1,d2,d3){
  const b=(d1.y*(s2.y-s3.y)+d2.y*(s3.y-s1.y)+d3.y*(s1.y-s2.y))/den;
  const d=(d1.y*(s3.x-s2.x)+d2.y*(s1.x-s3.x)+d3.y*(s2.x-s1.x))/den;
  const f=(d1.y*(s2.x*s3.y-s3.x*s2.y)+d2.y*(s3.x*s1.y-s1.x*s3.y)+d3.y*(s1.x*s2.y-s2.x*s1.y))/den;
- // Expand the destination triangle a fraction of a device pixel to cover
- // antialiased shared edges. This avoids the visible grid-shaped gaps.
- const q1=d1,q2=d2,q3=d3;
+ // Overlap neighboring mesh triangles slightly. Canvas antialiases each
+ // clip edge independently; without this expansion those edges leave the
+ // repeating triangular/square transparency pattern visible in the image.
+ const overlap=.45,cx=(d1.x+d2.x+d3.x)/3,cy=(d1.y+d2.y+d3.y)/3;
+ const expand=p=>{const dx=p.x-cx,dy=p.y-cy,len=Math.hypot(dx,dy)||1;return{x:p.x+dx/len*overlap,y:p.y+dy/len*overlap}};
+ const q1=expand(d1),q2=expand(d2),q3=expand(d3);
  target.save();target.beginPath();target.moveTo(q1.x,q1.y);target.lineTo(q2.x,q2.y);target.lineTo(q3.x,q3.y);target.closePath();target.clip();target.transform(a,b,c,d,e,f);target.drawImage(bitmap,0,0);target.restore();
 }
 function drawPerspectiveImage(target,bitmap,w,h,px=0,py=0){
